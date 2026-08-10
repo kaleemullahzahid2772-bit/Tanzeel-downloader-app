@@ -1,0 +1,77 @@
+import type { VideoAnalysisResult, SupportedPlatform } from '../../domain/models/VideoItem';
+
+export const MOCK_ANALYZER_RESPONSES: Record<SupportedPlatform, VideoAnalysisResult> = {
+  youtube: {
+    url: 'https://youtube.com/watch?v=dQw4w9WgXcQ',
+    platform: 'youtube',
+    title: 'Modern Architecture & UI Design Showcase 2026',
+    author: 'Tech & Design Studio',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80',
+    duration: '04:12',
+    qualities: [
+      { label: '1080p Full HD (MP4)', resolution: '1080p', estimatedSize: '68.4 MB', format: 'mp4' },
+      { label: '720p HD (MP4)', resolution: '720p', estimatedSize: '34.2 MB', format: 'mp4' },
+      { label: '480p SD (MP4)', resolution: '480p', estimatedSize: '18.1 MB', format: 'mp4' },
+      { label: 'High Quality Audio (MP3)', resolution: 'audio', estimatedSize: '5.8 MB', format: 'mp3', isAudioOnly: true },
+    ],
+    analyzedAt: new Date().toISOString(),
+    isMockData: true,
+  },
+  tiktok: {
+    url: 'https://tiktok.com/@creator/video/7123456789012345678',
+    platform: 'tiktok',
+    title: 'Viral Motion Design & Micro-animations Tutorial',
+    author: '@creativestudio',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=600&auto=format&fit=crop&q=80',
+    duration: '00:58',
+    qualities: [
+      { label: '1080p HD No Watermark (MP4)', resolution: '1080p', estimatedSize: '18.5 MB', format: 'mp4' },
+      { label: '720p Standard (MP4)', resolution: '720p', estimatedSize: '9.2 MB', format: 'mp4' },
+      { label: 'Background Audio (MP3)', resolution: 'audio', estimatedSize: '1.4 MB', format: 'mp3', isAudioOnly: true },
+    ],
+    analyzedAt: new Date().toISOString(),
+    isMockData: true,
+  },
+  facebook: {
+    url: 'https://facebook.com/watch/?v=1015849382910',
+    platform: 'facebook',
+    title: 'Global Tech Innovation Summit Highlights',
+    author: 'Global Tech Network',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=600&auto=format&fit=crop&q=80',
+    duration: '12:45',
+    qualities: [
+      { label: '1080p HD (MP4)', resolution: '1080p', estimatedSize: '142.0 MB', format: 'mp4' },
+      { label: '720p HD (MP4)', resolution: '720p', estimatedSize: '78.5 MB', format: 'mp4' },
+      { label: '480p SD (MP4)', resolution: '480p', estimatedSize: '36.0 MB', format: 'mp4' },
+    ],
+    analyzedAt: new Date().toISOString(),
+    isMockData: true,
+  },
+  instagram: {
+    url: 'https://instagram.com/reel/C1234567890/',
+    platform: 'instagram',
+    title: 'Stunning Cinematic Travel Reel 4K',
+    author: '@explorerguy',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=600&auto=format&fit=crop&q=80',
+    duration: '01:30',
+    qualities: [
+      { label: '1080p HD Reel (MP4)', resolution: '1080p', estimatedSize: '29.8 MB', format: 'mp4' },
+      { label: '720p Standard (MP4)', resolution: '720p', estimatedSize: '14.2 MB', format: 'mp4' },
+    ],
+    analyzedAt: new Date().toISOString(),
+    isMockData: true,
+  },
+  unknown: {
+    url: 'https://example.com/video.mp4',
+    platform: 'unknown',
+    title: 'Universal HTML5 Web Video Stream',
+    author: 'Web Media Source',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1536240478700-b869070f9279?w=600&auto=format&fit=crop&q=80',
+    duration: '02:15',
+    qualities: [
+      { label: 'Direct Source Stream (MP4)', resolution: '720p', estimatedSize: '24.0 MB', format: 'mp4' },
+    ],
+    analyzedAt: new Date().toISOString(),
+    isMockData: true,
+  },
+};
