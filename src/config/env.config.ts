@@ -8,8 +8,8 @@ export interface EnvConfig {
 const isProd = import.meta.env.MODE === 'production';
 
 export const envConfig: EnvConfig = {
-  apiUrl: import.meta.env.VITE_API_URL || (isProd ? 'https://api.omnidownloader.app' : 'http://localhost:4000'),
+  apiUrl: import.meta.env.VITE_API_URL || 'http://localhost:4000',
   isProduction: isProd,
-  versionName: '1.0.0',
-  versionCode: 100,
+  versionName: '1.1.0',
+  versionCode: 110,
 };
