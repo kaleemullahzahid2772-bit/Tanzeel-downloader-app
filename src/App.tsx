@@ -11,7 +11,7 @@ const MainAppContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('home');
 
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900 flex items-center justify-center p-0 md:p-6 select-none font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-[#e2f2ea] text-slate-900 flex items-center justify-center p-0 md:p-6 select-none font-sans overflow-x-hidden">
       
       {/* Desktop Outer Background Glows */}
       <div className="fixed inset-0 pointer-events-none hidden md:block overflow-hidden">
@@ -20,18 +20,18 @@ const MainAppContent: React.FC = () => {
       </div>
 
       {/* Realistic Mobile Phone Frame Container (Desktop Centered / Full Screen on Mobile) */}
-      <div className="w-full md:max-w-[400px] h-screen md:h-[844px] md:max-h-[92vh] bg-slate-50 md:border-[12px] md:border-slate-300 md:rounded-[48px] md:shadow-2xl md:shadow-slate-300/70 flex flex-col relative overflow-hidden md:ring-1 md:ring-slate-200">
+      <div className="w-full md:max-w-[410px] h-screen md:h-[844px] md:max-h-[92vh] bg-[#edf7f2] md:border-[10px] md:border-white/80 md:rounded-[48px] md:shadow-2xl md:shadow-emerald-950/10 flex flex-col relative overflow-hidden md:ring-1 md:ring-emerald-200/60">
         
         {/* Smartphone Camera Notch Pill (Desktop Only) */}
-        <div className="hidden md:flex items-center justify-center pt-2.5 pb-1 bg-slate-50 shrink-0 z-50">
-          <div className="w-24 h-4 bg-slate-200/90 rounded-full border border-slate-300/80 shadow-inner flex items-center justify-end px-3">
-            <div className="w-2 h-2 rounded-full bg-slate-400 border border-slate-300" />
+        <div className="hidden md:flex items-center justify-center pt-2.5 pb-1 bg-[#edf7f2] shrink-0 z-50">
+          <div className="w-24 h-4 bg-emerald-100/60 rounded-full border border-emerald-200/60 shadow-inner flex items-center justify-end px-3">
+            <div className="w-2 h-2 rounded-full bg-emerald-600/40 border border-emerald-300" />
           </div>
         </div>
 
         {/* Inner Mobile App Screen Viewport */}
-        <div className="flex-1 flex flex-col relative overflow-y-auto overflow-x-hidden w-full pb-20 pt-2 bg-slate-50">
-          <main className="flex-1 flex flex-col justify-center px-3.5 max-w-lg mx-auto w-full">
+        <div className="flex-1 flex flex-col relative overflow-y-auto overflow-x-hidden w-full pb-20 pt-1 bg-[#edf7f2]">
+          <main className="flex-1 flex flex-col justify-center px-3 sm:px-4 max-w-lg mx-auto w-full">
             {activeTab === 'home' && <HomeScreen />}
             {activeTab === 'status' && <StatusScreen />}
           </main>

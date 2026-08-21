@@ -2,8 +2,16 @@
 
 @layer base {
   body {
-    @apply font-sans bg-slate-950 text-slate-100 antialiased min-h-screen transition-colors duration-300;
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: #edf7f2;
+    color: #0f172a;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
   }
+}
+
+.font-arabic {
+  font-family: 'Amiri', serif;
 }
 
 /* Custom scrollbar for mobile feel */
@@ -17,10 +25,10 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.2);
+  background: rgba(16, 185, 129, 0.2);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.4);
+  background: rgba(16, 185, 129, 0.4);
 }

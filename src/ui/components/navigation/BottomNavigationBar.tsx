@@ -20,7 +20,7 @@ export const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
   ];
 
   return (
-    <nav className="absolute md:absolute fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-xl border-t border-slate-200/90 shadow-lg px-4 py-2">
+    <nav className="absolute md:absolute fixed bottom-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-xl border-t border-emerald-100 shadow-lg px-4 py-2">
       <div className="max-w-xs mx-auto flex items-center justify-around">
         {tabs.map((tab) => {
           const Icon = tab.icon;
@@ -45,13 +45,13 @@ export const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
                 <Icon
                   className={`w-5 h-5 transition-transform duration-200 ${
                     isActive
-                      ? 'text-emerald-600 scale-110'
+                      ? 'text-emerald-700 scale-110'
                       : 'text-slate-500 group-hover:text-slate-800'
                   }`}
                 />
                 <span
                   className={`text-[11px] mt-1 font-medium tracking-tight transition-colors ${
-                    isActive ? 'text-emerald-700 font-bold' : 'text-slate-500 group-hover:text-slate-800'
+                    isActive ? 'text-emerald-800 font-bold' : 'text-slate-500 group-hover:text-slate-800'
                   }`}
                 >
                   {tab.label}

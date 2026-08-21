@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Download, Clipboard, X, AlertCircle, CheckCircle2, WifiOff, Heart, Copy, Check, Info } from 'lucide-react';
+import { Download, Clipboard, X, AlertCircle, CheckCircle2, WifiOff, Heart, Copy, Check, Info, Share2, Link as LinkIcon } from 'lucide-react';
 import { useDownloads } from '../context/DownloadsContext';
 import { platformDetectorService } from '../../services/PlatformDetectorService';
 import { networkStatusService } from '../../services/network/NetworkStatusService';
@@ -47,6 +47,23 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
       showToast(`${label} copied to clipboard!`);
     } catch {
       showToast('Failed to copy to clipboard');
+    }
+  };
+
+  const handleShareApp = async () => {
+    const shareData = {
+      title: 'Tanzeel Pro',
+      text: 'Download high quality HD videos from YouTube, TikTok, Instagram & Facebook with Tanzeel Pro!',
+      url: window.location.href,
+    };
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch {
+        // Share dismissed
+      }
+    } else {
+      handleCopyText(window.location.href, 'App Link');
     }
   };
 
@@ -108,30 +125,55 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
   return (
     <div className="w-full flex-1 flex flex-col justify-between px-1 py-2 max-w-md mx-auto animate-fadeIn select-none relative min-h-[70vh] text-slate-900">
       
-      {/* Top Controls Bar (Info Button Left, Heart Button Right) */}
-      <div className="w-full flex items-center justify-between z-30 pt-1">
-        {/* Info Icon Button in Top-Left Corner */}
+      {/* Top Header Row (Info Left, Logo Center, Share & Heart Right) */}
+      <div className="w-full flex items-center justify-between z-30 pt-1 pb-2">
+        {/* Info Icon Button (Left Circular Badge) */}
         <button
           onClick={() => setIsAboutModalOpen(true)}
-          className="p-2.5 rounded-2xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 hover:text-slate-900 hover:scale-105 active:scale-95 transition-all shadow-md flex items-center justify-center group"
+          className="w-10 h-10 rounded-full bg-white shadow-sm border border-emerald-100/90 flex items-center justify-center text-slate-700 hover:bg-emerald-50 active:scale-95 transition-all"
           title="About Tanzeel Pro"
         >
-          <Info className="w-5 h-5 text-slate-600 group-hover:text-emerald-600 transition-colors" />
+          <Info className="w-5 h-5 text-emerald-800" />
         </button>
 
-        {/* Support Heart Button in Top-Right Corner */}
-        <button
-          onClick={() => setIsSupportModalOpen(true)}
-          className="p-2.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-600 hover:bg-emerald-100 hover:scale-105 active:scale-95 transition-all shadow-md flex items-center justify-center group"
-          title="Support TANZEEL App 💚"
-        >
-          <Heart className="w-5 h-5 fill-emerald-500/20 text-emerald-600 group-hover:fill-emerald-500 transition-colors" />
-        </button>
+        {/* Center Logo & App Title Header */}
+        <div className="flex flex-col items-center justify-center">
+          <div className="w-11 h-11 rounded-2xl p-[2px] bg-gradient-to-b from-amber-300 via-amber-200 to-emerald-300 shadow-md shadow-emerald-950/10 flex items-center justify-center">
+            <div className="w-full h-full bg-white rounded-[14px] p-0.5 flex items-center justify-center">
+              <img src="/logo.png" alt="Tanzeel Pro Logo" className="w-full h-full object-contain" />
+            </div>
+          </div>
+          <div className="text-emerald-950 font-extrabold tracking-[0.2em] text-xs sm:text-sm mt-1 flex items-center justify-center gap-1">
+            <span>T A N Z E E L</span>
+            <span className="text-amber-500 font-bold">•</span>
+          </div>
+        </div>
+
+        {/* Right Action Icons (Share & Heart Button) */}
+        <div className="flex items-center gap-2">
+          {/* Share Button (Mint Rounded Square) */}
+          <button
+            onClick={handleShareApp}
+            className="w-10 h-10 rounded-2xl bg-emerald-100/70 border border-emerald-200/60 flex items-center justify-center text-emerald-900 hover:bg-emerald-200/80 active:scale-95 transition-all"
+            title="Share App"
+          >
+            <Share2 className="w-4 h-4 text-emerald-900" />
+          </button>
+
+          {/* Heart Button (White Circular Badge) */}
+          <button
+            onClick={() => setIsSupportModalOpen(true)}
+            className="w-10 h-10 rounded-full bg-white shadow-sm border border-emerald-100/90 flex items-center justify-center text-emerald-800 hover:bg-emerald-50 active:scale-95 transition-all"
+            title="Support TANZEEL App 💚"
+          >
+            <Heart className="w-5 h-5 fill-emerald-800 text-emerald-800" />
+          </button>
+        </div>
       </div>
 
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed top-12 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-emerald-300 border border-emerald-500/40 rounded-2xl px-5 py-2.5 text-xs font-semibold shadow-2xl backdrop-blur-xl flex items-center gap-2 animate-fadeIn">
+        <div className="fixed top-14 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-emerald-300 border border-emerald-500/40 rounded-2xl px-5 py-2.5 text-xs font-semibold shadow-2xl backdrop-blur-xl flex items-center gap-2 animate-fadeIn">
           <Check className="w-4 h-4 text-emerald-400" />
           <span>{toastMessage}</span>
         </div>
@@ -145,25 +187,35 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
         </div>
       )}
 
-      {/* 1. App Logo / Branding Section (Tanzeel Pro Light Mode) */}
-      <div className="flex flex-col items-center text-center pt-2 pb-4">
-        <img
-          src="/logo.png"
-          alt="Tanzeel Pro Logo"
-          className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-contain shadow-lg shadow-slate-200 mb-2.5 border border-slate-200/80 bg-white p-1"
-        />
-        <h1 className="font-extrabold text-2.5xl tracking-tight text-slate-900">
-          Tanzeel Pro
-        </h1>
-        <p className="text-xs text-slate-500 font-medium mt-0.5">Status Saver & Video Downloader</p>
-      </div>
-
-      {/* 2. Main Downloader Card (Positioned in the MIDDLE) */}
-      <div className="w-full bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 shadow-xl shadow-slate-200/60 space-y-4 my-auto">
+      {/* Main Content White Card (Exact Screenshot Design) */}
+      <div className="w-full bg-white rounded-[36px] p-5 sm:p-7 shadow-xl shadow-emerald-950/5 border border-emerald-100/80 max-w-md mx-auto relative overflow-hidden my-auto space-y-3.5">
         
-        {/* Link Input Field */}
-        <div className="relative w-full">
-          <div className="relative flex items-center">
+        {/* Top Gold Border Line Accent */}
+        <div className="absolute top-0 left-8 right-8 h-[3px] bg-gradient-to-r from-transparent via-amber-300/80 to-transparent opacity-80" />
+
+        {/* 1. Large Arabic Calligraphy Title: سحر التحميل */}
+        <div className="text-center pt-1">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-emerald-900 font-arabic tracking-wide leading-tight">
+            سحر التحميل
+          </h1>
+          
+          <p className="text-xs sm:text-sm text-slate-600 font-medium text-center mt-2 max-w-xs mx-auto leading-relaxed">
+            Paste any video link to download in HD quality. Free, fast, no ads.
+          </p>
+
+          {/* Downloads Served Counter Pill */}
+          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 bg-emerald-50/90 text-emerald-800 border border-emerald-200/80 rounded-full text-[11px] font-bold mt-2.5 shadow-2xs">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
+            <span>1,247+ downloads served</span>
+          </div>
+        </div>
+
+
+
+        {/* 3. Link Input Field (Pill Shape with Link Icon) */}
+        <div className="w-full pt-1">
+          <div className="relative w-full rounded-full border-2 border-emerald-500/35 bg-white px-4 py-2.5 sm:py-3 flex items-center gap-2.5 shadow-xs focus-within:border-emerald-600 focus-within:ring-4 focus-within:ring-emerald-500/10 transition-all">
+            <LinkIcon className="w-5 h-5 text-emerald-700 shrink-0" />
             <input
               type="text"
               value={urlInput}
@@ -177,11 +229,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
                   handleDownload();
                 }
               }}
-              placeholder="Paste video link here..."
-              className="w-full pl-4 pr-24 py-3.5 bg-slate-50/90 border border-slate-200 rounded-2xl text-slate-900 placeholder-slate-400 text-sm shadow-inner focus:outline-none focus:border-emerald-500/80 focus:ring-2 focus:ring-emerald-500/20 transition-all"
+              placeholder="Paste link here..."
+              className="w-full bg-transparent text-slate-800 placeholder-slate-400 text-sm font-medium focus:outline-none"
             />
 
-            <div className="absolute right-2.5 flex items-center">
+            <div className="shrink-0 flex items-center">
               {urlInput ? (
                 <button
                   onClick={() => {
@@ -189,7 +241,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
                     setErrorMessage(null);
                     setCurrentTaskId(null);
                   }}
-                  className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 transition-colors"
+                  className="p-1 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
                   title="Clear"
                 >
                   <X className="w-4 h-4" />
@@ -197,7 +249,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
               ) : (
                 <button
                   onClick={handlePaste}
-                  className="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold flex items-center gap-1.5 hover:bg-emerald-100 transition-all active:scale-95"
+                  className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center gap-1 hover:bg-emerald-100 active:scale-95 transition-all"
                   title="Paste link"
                 >
                   <Clipboard className="w-3.5 h-3.5" />
@@ -207,70 +259,60 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
             </div>
           </div>
 
-          {/* Error Alert Message */}
-          {(errorMessage || activeTask?.state === TaskState.FAILED) && (
-            <div className="mt-2 text-xs text-rose-600 px-1 flex items-center gap-1.5 animate-fadeIn">
+          {/* Status Message below Input Field */}
+          {errorMessage || activeTask?.state === TaskState.FAILED ? (
+            <div className="mt-2 text-xs text-rose-600 font-semibold px-1 flex items-center justify-center gap-1.5 animate-fadeIn">
               <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-600" />
               <span>{errorMessage || activeTask?.errorMessage || 'Unable to analyze or download video.'}</span>
             </div>
+          ) : activeTask?.state === TaskState.DOWNLOADING ? (
+            <div className="w-full pt-3 space-y-1.5 animate-fadeIn">
+              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+                <div
+                  className="h-full bg-emerald-600 rounded-full transition-all duration-200 shadow-sm shadow-emerald-500/50"
+                  style={{ width: `${activeTask.progressPercent}%` }}
+                />
+              </div>
+              <div className="flex items-center justify-between text-[11px] font-mono text-emerald-800 px-1 font-bold">
+                <span>
+                  Downloading... {loadedMb} MB / {totalMb} MB {parseFloat(speedMb) > 0 ? `• ${speedMb} MB/s` : ''}
+                </span>
+                <span>{activeTask.progressPercent}%</span>
+              </div>
+            </div>
+          ) : activeTask?.state === TaskState.COMPLETED ? (
+            <div className="mt-2.5 p-2.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold shadow-xs animate-fadeIn flex items-center justify-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Download complete</span>
+            </div>
+          ) : (
+            <p className="text-xs font-bold text-slate-500 text-center mt-3 animate-pulse">
+              Waiting for a valid link...
+            </p>
           )}
         </div>
 
-        {/* Large Prominent Download Button */}
-        <button
-          onClick={handleDownload}
-          disabled={isBusy || !urlInput.trim() || !isOnline}
-          className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-extrabold text-base shadow-xl shadow-emerald-600/25 flex items-center justify-center gap-2.5 transition-all active:scale-[0.98]"
-        >
-          {activeTask?.state === TaskState.ANALYZING || activeTask?.state === TaskState.QUEUED ? (
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              <span>Analyzing...</span>
-            </div>
-          ) : activeTask?.state === TaskState.DOWNLOADING ? (
-            <div className="flex items-center gap-2">
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              <span>Downloading...</span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Download className="w-5 h-5" />
-              <span>DOWNLOAD</span>
-            </div>
-          )}
-        </button>
-
-        {/* Real Progress Line (Active Downloading State) */}
-        {activeTask?.state === TaskState.DOWNLOADING && (
-          <div className="w-full pt-2 space-y-1.5 animate-fadeIn">
-            <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
-              <div
-                className="h-full bg-emerald-600 rounded-full transition-all duration-200 shadow-sm shadow-emerald-500/50"
-                style={{ width: `${activeTask.progressPercent}%` }}
-              />
-            </div>
-            <div className="flex items-center justify-between text-[11px] font-mono text-emerald-700 px-0.5">
-              <span>
-                Downloading... {loadedMb} MB / {totalMb} MB {parseFloat(speedMb) > 0 ? `• ${speedMb} MB/s` : ''}
-              </span>
-              <span className="font-bold">{activeTask.progressPercent}%</span>
-            </div>
-          </div>
-        )}
-
-        {/* Real Download Completion Status Notice */}
-        {activeTask?.state === TaskState.COMPLETED && (
-          <div className="w-full pt-1 p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs shadow-sm animate-fadeIn flex items-center justify-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-            <span className="font-bold">Download complete</span>
-          </div>
-        )}
+        {/* 4. Giant Circular Download Button (Screenshot Design) */}
+        <div className="pt-2 flex justify-center">
+          <button
+            onClick={handleDownload}
+            disabled={isBusy || !urlInput.trim() || !isOnline}
+            className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-400 p-1 shadow-2xl shadow-emerald-600/40 hover:scale-105 active:scale-95 disabled:opacity-40 disabled:scale-100 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center justify-center border-4 border-white/60 group"
+            title="Download Video"
+          >
+            {activeTask?.state === TaskState.ANALYZING || activeTask?.state === TaskState.QUEUED ? (
+              <div className="w-9 h-9 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : (
+              <Download className="w-10 h-10 sm:w-11 sm:h-11 text-white stroke-[2.5] group-hover:translate-y-0.5 transition-transform" />
+            )}
+          </button>
+        </div>
 
       </div>
 
       <div className="pb-4" />
 
-      {/* 3. Support TANZEEL App Modal */}
+      {/* Support TANZEEL App Modal */}
       {isSupportModalOpen && (
         <div
           onClick={() => setIsSupportModalOpen(false)}
@@ -280,7 +322,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
             onClick={(e) => e.stopPropagation()}
             className="bg-white text-slate-900 rounded-3xl p-6 shadow-2xl max-w-sm w-full space-y-4 animate-scaleUp relative border border-slate-100"
           >
-            {/* Modal Close Icon Button */}
             <button
               onClick={() => setIsSupportModalOpen(false)}
               className="absolute top-4 right-4 p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
@@ -288,7 +329,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
               <X className="w-5 h-5" />
             </button>
 
-            {/* Header Title & Subtitle */}
             <div className="text-center space-y-1.5 pt-1">
               <h2 className="text-xl font-extrabold text-slate-900 flex items-center justify-center gap-1.5">
                 Support TANZEEL App 💚
@@ -298,7 +338,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
               </p>
             </div>
 
-            {/* Raast Information Box */}
             <div className="bg-emerald-50/90 border border-emerald-200/80 rounded-2xl p-4 text-left space-y-2 text-slate-800 shadow-inner">
               <div className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
                 <span>💚 Donate via Raast ID</span>
@@ -323,7 +362,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
               Thank you for your support!
             </p>
 
-            {/* Action Buttons */}
             <div className="flex items-center gap-2 pt-1">
               <button
                 onClick={() => handleCopyText('kaleemullahzahid2772@gmail.com', 'Email')}
@@ -352,7 +390,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
         </div>
       )}
 
-      {/* 4. About Tanzeel Pro Modal */}
+      {/* About Tanzeel Pro Modal */}
       {isAboutModalOpen && (
         <div
           onClick={() => setIsAboutModalOpen(false)}
@@ -362,7 +400,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
             onClick={(e) => e.stopPropagation()}
             className="bg-white text-slate-900 rounded-3xl p-5 sm:p-6 shadow-2xl max-w-sm w-full space-y-3.5 animate-scaleUp relative border border-slate-100 max-h-[85vh] overflow-y-auto text-left"
           >
-            {/* Modal Close Icon Button */}
             <button
               onClick={() => setIsAboutModalOpen(false)}
               className="absolute top-4 right-4 p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
@@ -370,7 +407,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
               <X className="w-5 h-5" />
             </button>
 
-            {/* Title & Description */}
             <div className="text-center space-y-1 pt-1">
               <h2 className="text-xl font-extrabold text-emerald-950">
                 About Tanzeel Pro
@@ -380,7 +416,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
               </p>
             </div>
 
-            {/* Key Features Card */}
             <div className="bg-emerald-50/90 border border-emerald-200/80 rounded-2xl p-4 space-y-2 text-slate-800 shadow-inner">
               <div className="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
                 <span>Key Features</span>
@@ -393,15 +428,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
               </ul>
             </div>
 
-            {/* Our Projects Card */}
             <div className="bg-emerald-50/90 border border-emerald-200/80 rounded-2xl p-4 space-y-2.5 text-slate-800 shadow-inner">
               <div className="text-xs font-bold text-emerald-900">
                 Our Projects
               </div>
 
               <div className="space-y-2">
-                {/* Project 1 */}
-                <div className="bg-white rounded-xl p-2.5 border border-slate-200/60 shadow-sm flex items-center gap-3">
+                <div className="bg-white rounded-xl p-2.5 border border-slate-200/60 shadow-xs flex items-center gap-3">
                   <div className="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 font-bold flex items-center justify-center text-xs shrink-0">
                     Q
                   </div>
@@ -411,8 +444,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
                   </div>
                 </div>
 
-                {/* Project 2 */}
-                <div className="bg-white rounded-xl p-2.5 border border-slate-200/60 shadow-sm flex items-center gap-3">
+                <div className="bg-white rounded-xl p-2.5 border border-slate-200/60 shadow-xs flex items-center gap-3">
                   <div className="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-700 font-bold flex items-center justify-center text-xs shrink-0">
                     A
                   </div>
@@ -422,8 +454,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
                   </div>
                 </div>
 
-                {/* Project 3 */}
-                <div className="bg-white rounded-xl p-2.5 border border-slate-200/60 shadow-sm flex items-center gap-3">
+                <div className="bg-white rounded-xl p-2.5 border border-slate-200/60 shadow-xs flex items-center gap-3">
                   <div className="w-8 h-8 rounded-xl bg-indigo-100 text-indigo-700 font-bold flex items-center justify-center text-xs shrink-0">
                     S
                   </div>
@@ -435,14 +466,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
               </div>
             </div>
 
-            {/* Version / Credit */}
             <div className="text-center pt-1">
               <p className="text-[11px] text-slate-500 font-medium">
                 Version 1.1.0 · A project by Al-Ulama & Sudoor.org
               </p>
             </div>
 
-            {/* GOT IT Button */}
             <div className="pt-1">
               <button
                 onClick={() => setIsAboutModalOpen(false)}
