@@ -41,7 +41,7 @@ export class YtDlpExtractorService {
           '--referer', referer,
           url,
         ],
-        { timeout: 2000, maxBuffer: 10 * 1024 * 1024 },
+        { timeout: 15000, maxBuffer: 10 * 1024 * 1024 },
         (err, stdout) => {
           if (err || !stdout) {
             return resolve(null);
@@ -111,10 +111,8 @@ export class YtDlpExtractorService {
 
     const ffmpegBinary = ffmpegInstaller?.path && fs.existsSync(ffmpegInstaller.path) ? ffmpegInstaller.path : null;
 
-    // TikTok format ID priority:
-    // TikTok labels its H.264 formats as `h264_...` and its HEVC formats as `bytevc1_...`.
-    // We explicitly target h264 / avc1 formats to guarantee H.264 video output that plays natively on Windows without $0.99 HEVC extension.
-    let formatString = 'bv*[vcodec^=avc1]+ba[acodec^=mp4a]/bv*[vcodec^=avc1]+ba/b[vcodec^=avc1]/bestvideo[vcodec^=avc1]+bestaudio/best';
+    // Format selection priority:
+    let formatString = 'bv*[vcodec^=avc1]+ba[acodec^=mp4a]/18/b[ext=mp4]/bestvideo+bestaudio/best';
     if (isTikTok) {
       formatString = 'bv*[vcodec*=h264]+ba/b[vcodec*=h264]/[format_id^=h264]/bv*[vcodec^=avc1]+ba/b[vcodec^=avc1]/best';
     }
