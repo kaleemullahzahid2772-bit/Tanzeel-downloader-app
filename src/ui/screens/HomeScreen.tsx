@@ -125,19 +125,21 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
   return (
     <div className="w-full flex-1 flex flex-col justify-between px-1 py-2 max-w-md mx-auto animate-fadeIn select-none relative min-h-[70vh] text-slate-900">
       
-      {/* Top Header Row (Info Left, Logo Center, Share & Heart Right) */}
-      <div className="w-full flex items-center justify-between z-30 pt-1 pb-2">
+      {/* Top Header Row (Info Left, Logo Perfectly Centered, Share & Heart Right) */}
+      <div className="w-full relative flex items-center justify-between z-30 pt-1 pb-2 min-h-[54px]">
         {/* Info Icon Button (Left Circular Badge) */}
-        <button
-          onClick={() => setIsAboutModalOpen(true)}
-          className="w-10 h-10 rounded-full bg-white shadow-sm border border-emerald-100/90 flex items-center justify-center text-slate-700 hover:bg-emerald-50 active:scale-95 transition-all"
-          title="About Tanzeel Pro"
-        >
-          <Info className="w-5 h-5 text-emerald-800" />
-        </button>
+        <div className="flex items-center z-10">
+          <button
+            onClick={() => setIsAboutModalOpen(true)}
+            className="w-10 h-10 rounded-full bg-white shadow-sm border border-emerald-100/90 flex items-center justify-center text-slate-700 hover:bg-emerald-50 active:scale-95 transition-all"
+            title="About Tanzeel Pro"
+          >
+            <Info className="w-5 h-5 text-emerald-800" />
+          </button>
+        </div>
 
-        {/* Center Logo & App Title Header */}
-        <div className="flex flex-col items-center justify-center">
+        {/* Absolutely Centered Logo & App Title Header */}
+        <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center justify-center z-0 pointer-events-auto">
           <div className="w-11 h-11 rounded-2xl p-[2px] bg-gradient-to-b from-amber-300 via-amber-200 to-emerald-300 shadow-md shadow-emerald-950/10 flex items-center justify-center">
             <div className="w-full h-full bg-white rounded-[14px] p-0.5 flex items-center justify-center">
               <img src="/logo.png" alt="Tanzeel Pro Logo" className="w-full h-full object-contain" />
@@ -150,7 +152,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
         </div>
 
         {/* Right Action Icons (Share & Heart Button) */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 z-10">
           {/* Share Button (Mint Rounded Square) */}
           <button
             onClick={handleShareApp}
