@@ -28,6 +28,49 @@ export interface ExtractedMedia {
   formats: FormatOption[];
 }
 
+export function sendJson(res: any, statusCode: number, data: any) {
+  if (typeof res.status === 'function' && typeof res.json === 'function') {
+    return res.status(statusCode).json(data);
+  }
+  res.statusCode = statusCode;
+  res.setHeader('Content-Type', 'application/json');
+  res.end(JSON.stringify(data));
+}
+
+export async function parseBody(req: any): Promise<any> {
+  if (req.body) {
+    if (typeof req.body === 'string') {
+      try {
+        return JSON.parse(req.body);
+      } catch {
+        return {};
+      }
+    }
+    if (typeof req.body === 'object') {
+      return req.body;
+    }
+  }
+
+  if (typeof req.on !== 'function') {
+    return {};
+  }
+
+  return new Promise((resolve) => {
+    let rawData = '';
+    req.on('data', (chunk: any) => {
+      rawData += chunk;
+    });
+    req.on('end', () => {
+      try {
+        resolve(JSON.parse(rawData));
+      } catch {
+        resolve({});
+      }
+    });
+    req.on('error', () => resolve({}));
+  });
+}
+
 export function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = Math.floor(seconds % 60);
@@ -57,27 +100,47 @@ export async function extractHtmlAndOg(url: string): Promise<{ title?: string; a
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
         'Accept-Language': 'en-US,en;q=0.9',
       },
-      timeout: 5000,
+      timeout: 4000,
       maxRedirects: 5,
     });
 
     const html = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
-    const $ = cheerio.load(html);
 
-    const title = $('meta[property="og:title"]').attr('content') ||
-                  $('title').text() ||
-                  $('meta[name="twitter:title"]').attr('content');
+    let title: string | undefined;
+    let thumbnailUrl: string | undefined;
+    let author: string | undefined;
 
-    const thumbnailUrl = $('meta[property="og:image"]').attr('content') ||
-                         $('meta[name="twitter:image"]').attr('content');
+    try {
+      const loadFn = (cheerio as any).load || (cheerio as any).default?.load || cheerio;
+      if (typeof loadFn === 'function') {
+        const $ = loadFn(html);
+        title = $('meta[property="og:title"]').attr('content') ||
+                $('title').text() ||
+                $('meta[name="twitter:title"]').attr('content');
 
-    const author = $('meta[property="og:site_name"]').attr('content') ||
-                   $('meta[name="author"]').attr('content');
+        thumbnailUrl = $('meta[property="og:image"]').attr('content') ||
+                       $('meta[name="twitter:image"]').attr('content');
+
+        author = $('meta[property="og:site_name"]').attr('content') ||
+                 $('meta[name="author"]').attr('content');
+      }
+    } catch {
+      // Fallback to regex
+    }
+
+    if (!title) {
+      const titleMatch = html.match(/<title[^>]*>([^<]+)<\/title>/i) || html.match(/property="og:title"\s+content="([^"]+)"/i);
+      if (titleMatch) title = titleMatch[1];
+    }
+    if (!thumbnailUrl) {
+      const imgMatch = html.match(/property="og:image"\s+content="([^"]+)"/i) || html.match(/name="twitter:image"\s+content="([^"]+)"/i);
+      if (imgMatch) thumbnailUrl = imgMatch[1];
+    }
 
     const directVideoMatch =
-      $('meta[property="og:video:secure_url"]').attr('content') ||
-      $('meta[property="og:video"]').attr('content') ||
-      $('meta[name="twitter:player:stream"]').attr('content') ||
+      html.match(/property="og:video:secure_url"\s+content="([^"]+)"/i)?.[1] ||
+      html.match(/property="og:video"\s+content="([^"]+)"/i)?.[1] ||
+      html.match(/name="twitter:player:stream"\s+content="([^"]+)"/i)?.[1] ||
       html.match(/hd_src:"([^"]+)"/i)?.[1] ||
       html.match(/sd_src:"([^"]+)"/i)?.[1] ||
       html.match(/browser_native_hd_url":"([^"]+)"/i)?.[1] ||
@@ -85,8 +148,7 @@ export async function extractHtmlAndOg(url: string): Promise<{ title?: string; a
       html.match(/playable_url_quality_hd":"([^"]+)"/i)?.[1] ||
       html.match(/playable_url":"([^"]+)"/i)?.[1] ||
       html.match(/video_url":"([^"]+)"/i)?.[1] ||
-      html.match(/"playAddr":"([^"]+)"/i)?.[1] ||
-      $('video').attr('src');
+      html.match(/"playAddr":"([^"]+)"/i)?.[1];
 
     let directMediaUrl = directVideoMatch ? directVideoMatch.replace(/\\/g, '') : undefined;
     if (directMediaUrl && directMediaUrl.startsWith('//')) {
@@ -105,7 +167,7 @@ export async function extractHtmlAndOg(url: string): Promise<{ title?: string; a
 }
 
 export async function extractMediaMetadata(rawUrl: string): Promise<ExtractedMedia> {
-  const url = rawUrl.trim();
+  const url = (rawUrl || '').trim();
   const { platform, platformName } = detectPlatform(url);
 
   // Direct MP4 / Web Video Check
@@ -158,13 +220,13 @@ export async function extractMediaMetadata(rawUrl: string): Promise<ExtractedMed
     }
 
     try {
-      const oembed = await axios.get(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`, { timeout: 4000 });
+      const oembed = await axios.get(`https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`, { timeout: 3500 });
       if (oembed.data) {
         if (oembed.data.title) title = oembed.data.title;
         if (oembed.data.author_name) author = oembed.data.author_name;
       }
     } catch {
-      // Fallback
+      // Fallback gracefully
     }
 
     const thumbnailUrl = videoId
@@ -239,7 +301,7 @@ export async function extractMediaMetadata(rawUrl: string): Promise<ExtractedMed
     let directMediaUrl: string | undefined;
 
     try {
-      const oembedRes = await axios.get(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`, { timeout: 4000 }).catch(() => null);
+      const oembedRes = await axios.get(`https://www.tiktok.com/oembed?url=${encodeURIComponent(url)}`, { timeout: 3500 }).catch(() => null);
       if (oembedRes?.data) {
         if (oembedRes.data.title) title = oembedRes.data.title;
         if (oembedRes.data.author_name) author = oembedRes.data.author_name;
@@ -421,7 +483,7 @@ export function createRemoteStream(remoteUrl: string): Promise<{ stream: Readabl
       );
 
       req.on('error', () => resolve(null));
-      req.setTimeout(6000, () => {
+      req.setTimeout(5000, () => {
         req.destroy();
         resolve(null);
       });

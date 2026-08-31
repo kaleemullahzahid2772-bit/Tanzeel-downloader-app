@@ -1,23 +1,25 @@
-import { extractMediaMetadata } from './extractor';
+import { extractMediaMetadata, parseBody, sendJson } from './extractor';
 
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
 
   if (req.method === 'OPTIONS') {
-    return res.status(204).end();
+    res.statusCode = 204;
+    return res.end();
   }
 
   if (req.method !== 'POST') {
-    return res.status(405).json({ success: false, error: 'Method not allowed. Use POST.' });
+    return sendJson(res, 405, { success: false, error: 'Method not allowed. Use POST.' });
   }
 
   try {
-    const { url } = req.body || {};
+    const body = await parseBody(req);
+    const url = body?.url;
 
     if (!url || typeof url !== 'string' || !url.trim()) {
-      return res.status(400).json({
+      return sendJson(res, 400, {
         success: false,
         error: 'Please paste a valid video URL.',
       });
@@ -25,13 +27,13 @@ export default async function handler(req: any, res: any) {
 
     const metadata = await extractMediaMetadata(url);
 
-    return res.status(200).json({
+    return sendJson(res, 200, {
       success: true,
       ...metadata,
     });
   } catch (error: any) {
     console.error('[API Analyze Error]', error);
-    return res.status(500).json({
+    return sendJson(res, 500, {
       success: false,
       error: error?.message || 'Failed to analyze video URL.',
     });

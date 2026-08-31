@@ -1,24 +1,27 @@
-import { extractMediaMetadata, createPlayableStream, createRemoteStream } from './extractor';
+import { extractMediaMetadata, createPlayableStream, createRemoteStream, parseBody, sendJson } from './extractor';
 
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Range, Authorization, X-Requested-With');
   res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Range, Content-Disposition, Transfer-Encoding');
 
   if (req.method === 'OPTIONS') {
-    return res.status(204).end();
+    res.statusCode = 204;
+    return res.end();
   }
 
   if (req.method !== 'POST') {
-    return res.status(405).json({ success: false, error: 'Method not allowed. Use POST.' });
+    return sendJson(res, 405, { success: false, error: 'Method not allowed. Use POST.' });
   }
 
   try {
-    const { url, quality } = req.body || {};
+    const body = await parseBody(req);
+    const url = body?.url;
+    const quality = body?.quality;
 
     if (!url || typeof url !== 'string' || !url.trim()) {
-      return res.status(400).json({
+      return sendJson(res, 400, {
         success: false,
         error: 'Please provide a valid video link.',
       });
@@ -36,6 +39,7 @@ export default async function handler(req: any, res: any) {
     if (directUrl) {
       const remoteRes = await createRemoteStream(directUrl);
       if (remoteRes && remoteRes.stream) {
+        res.statusCode = 200;
         res.setHeader('Content-Type', remoteRes.contentType || (isAudio ? 'audio/mpeg' : 'video/mp4'));
         res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
         if (remoteRes.contentLength > 0) {
@@ -48,6 +52,7 @@ export default async function handler(req: any, res: any) {
 
     // Playable stream fallback
     const { stream, contentLength } = createPlayableStream();
+    res.statusCode = 200;
     res.setHeader('Content-Type', isAudio ? 'audio/mpeg' : 'video/mp4');
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
     res.setHeader('Content-Length', contentLength.toString());
@@ -55,7 +60,7 @@ export default async function handler(req: any, res: any) {
   } catch (error: any) {
     console.error('[API Download Error]', error);
     if (!res.headersSent) {
-      return res.status(500).json({
+      return sendJson(res, 500, {
         success: false,
         error: error?.message || 'Download stream processing error.',
       });
