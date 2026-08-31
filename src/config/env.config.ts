@@ -8,7 +8,7 @@ export interface EnvConfig {
 const isProd = import.meta.env.MODE === 'production';
 
 export const envConfig: EnvConfig = {
-  apiUrl: import.meta.env.VITE_API_URL || 'http://localhost:4000',
+  apiUrl: import.meta.env.VITE_API_URL || '',
   isProduction: isProd,
   versionName: '1.1.0',
   versionCode: 110,
