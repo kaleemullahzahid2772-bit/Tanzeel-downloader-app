@@ -9,11 +9,26 @@ export class YtDlpExtractorService {
   private ytDlpPath: string;
 
   constructor() {
-    this.ytDlpPath = path.resolve(__dirname, '../../bin/yt-dlp.exe');
+    if (process.env.YT_DLP_PATH && fs.existsSync(process.env.YT_DLP_PATH)) {
+      this.ytDlpPath = process.env.YT_DLP_PATH;
+    } else {
+      const winPath = path.resolve(__dirname, '../../bin/yt-dlp.exe');
+      const linuxPath = path.resolve(__dirname, '../../bin/yt-dlp');
+      if (fs.existsSync(winPath)) {
+        this.ytDlpPath = winPath;
+      } else if (fs.existsSync(linuxPath)) {
+        this.ytDlpPath = linuxPath;
+      } else {
+        // Fallback to system yt-dlp in PATH (e.g. Docker / Linux)
+        this.ytDlpPath = process.platform === 'win32' ? 'yt-dlp.exe' : 'yt-dlp';
+      }
+    }
   }
 
   public isAvailable(): boolean {
-    return fs.existsSync(this.ytDlpPath);
+    if (fs.existsSync(this.ytDlpPath)) return true;
+    // Check if yt-dlp is available in system PATH
+    return this.ytDlpPath === 'yt-dlp' || this.ytDlpPath === 'yt-dlp.exe';
   }
 
   public async analyzeUrl(url: string, platform: 'youtube' | 'tiktok' | 'facebook' | 'instagram' | 'unknown'): Promise<MediaMetadata | null> {

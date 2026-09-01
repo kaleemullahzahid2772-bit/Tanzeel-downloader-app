@@ -33,9 +33,9 @@ export default async function handler(req: any, res: any) {
     });
   } catch (error: any) {
     console.error('[API Analyze Error]', error);
-    return sendJson(res, 500, {
+    return sendJson(res, 400, {
       success: false,
-      error: error?.message || 'Failed to analyze video URL.',
+      error: error?.message || 'Unable to analyze video link. Please check the URL and try again.',
     });
   }
 }
