@@ -10,5 +10,5 @@ export const envConfig = {
   maxFileSizeBytes: parseInt(process.env.MAX_FILE_SIZE_BYTES || '500000000', 10),
   downloadTimeoutMs: parseInt(process.env.DOWNLOAD_TIMEOUT_MS || '120000', 10),
   maxConcurrentDownloads: parseInt(process.env.MAX_CONCURRENT_DOWNLOADS || '5', 10),
-  allowedOrigins: (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://localhost:3000').split(','),
+  allowedOrigins: (process.env.ALLOWED_ORIGINS || '*').split(',').map((s) => s.trim()),
 };

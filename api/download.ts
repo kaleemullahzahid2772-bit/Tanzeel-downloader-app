@@ -1,5 +1,7 @@
 import { extractMediaMetadata, createPlayableStream, createRemoteStream, parseBody, sendJson } from './extractor';
 
+const BACKEND_URL = process.env.VITE_API_URL || process.env.BACKEND_API_URL || 'https://tanzeel-downloader-app-1.onrender.com';
+
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
@@ -25,6 +27,31 @@ export default async function handler(req: any, res: any) {
         success: false,
         error: 'Please provide a valid video link.',
       });
+    }
+
+    // Try live Render backend first
+    try {
+      const backendRes = await fetch(`${BACKEND_URL}/api/download`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(req.headers.range ? { Range: req.headers.range } : {}),
+        },
+        body: JSON.stringify({ url, quality }),
+      });
+
+      if (backendRes.ok && backendRes.body) {
+        res.statusCode = backendRes.status;
+        for (const [key, value] of backendRes.headers.entries()) {
+          res.setHeader(key, value);
+        }
+        const { Readable } = await import('stream');
+        const nodeStream = (Readable as any).fromWeb ? (Readable as any).fromWeb(backendRes.body) : backendRes.body;
+        nodeStream.pipe(res);
+        return;
+      }
+    } catch (proxyError: any) {
+      console.warn('[Download Proxy to Render failed]:', proxyError?.message);
     }
 
     const meta = await extractMediaMetadata(url);

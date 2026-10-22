@@ -8,7 +8,7 @@ export interface EnvConfig {
 const isProd = import.meta.env.MODE === 'production';
 
 export const envConfig: EnvConfig = {
-  apiUrl: import.meta.env.VITE_API_URL || '',
+  apiUrl: import.meta.env.VITE_API_URL || 'https://tanzeel-downloader-app-1.onrender.com',
   isProduction: isProd,
   versionName: '1.1.0',
   versionCode: 110,

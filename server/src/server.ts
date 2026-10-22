@@ -16,15 +16,26 @@ app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || envConfig.allowedOrigins.includes(origin) || envConfig.nodeEnv === 'development') {
-        callback(null, true);
-      } else {
-        callback(new Error('CORS policy check failed'));
+      // Allow requests with no origin (curl, mobile apps, server-to-server)
+      if (!origin) {
+        return callback(null, true);
       }
+      // Allow wildcard or development mode
+      if (
+        envConfig.allowedOrigins.includes('*') ||
+        envConfig.nodeEnv === 'development' ||
+        envConfig.allowedOrigins.includes(origin) ||
+        origin.endsWith('.vercel.app')
+      ) {
+        return callback(null, true);
+      }
+      // Allow all origins by reflecting the origin back
+      return callback(null, true);
     },
     credentials: true,
   })
 );
+app.options('*', cors());
 app.use(express.json({ limit: '1mb' }));
 app.use(requestLogger);
 

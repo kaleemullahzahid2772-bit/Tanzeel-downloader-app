@@ -1,5 +1,7 @@
 import { extractMediaMetadata, parseBody, sendJson } from './extractor';
 
+const BACKEND_URL = process.env.VITE_API_URL || process.env.BACKEND_API_URL || 'https://tanzeel-downloader-app-1.onrender.com';
+
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
@@ -25,6 +27,23 @@ export default async function handler(req: any, res: any) {
       });
     }
 
+    // Forward to live Render backend
+    try {
+      const renderRes = await fetch(`${BACKEND_URL}/api/analyze`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url }),
+      });
+
+      const data = await renderRes.json();
+      return sendJson(res, renderRes.status, data);
+    } catch (proxyError: any) {
+      console.warn('[Proxy to Render failed, fallback to local extractor]:', proxyError?.message);
+    }
+
+    // Fallback to local extractor
     const metadata = await extractMediaMetadata(url);
 
     return sendJson(res, 200, {
