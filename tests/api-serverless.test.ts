@@ -4,7 +4,7 @@ import analyzeHandler from '../api/analyze';
 import healthHandler from '../api/health';
 
 describe('Serverless API Handlers', () => {
-  it('healthHandler returns 200 ok with raw mock res', () => {
+  it('healthHandler returns 200 ok with raw mock res', async () => {
     let statusCode = 0;
     let headers: Record<string, string> = {};
     let body = '';
@@ -17,7 +17,7 @@ describe('Serverless API Handlers', () => {
       end(data: string) { body = data; },
     };
 
-    healthHandler(req as any, res as any);
+    await healthHandler(req as any, res as any);
     expect(statusCode).toBe(200);
     const parsed = JSON.parse(body);
     expect(parsed.status).toBe('ok');

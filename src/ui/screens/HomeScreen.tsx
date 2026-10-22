@@ -1,10 +1,33 @@
 import React, { useState, useEffect } from 'react';
-import { Download, Clipboard, X, AlertCircle, CheckCircle2, WifiOff, Heart, Copy, Check, Info, Share2, Link as LinkIcon } from 'lucide-react';
+import { Download, Clipboard, X, AlertCircle, CheckCircle2, WifiOff, Heart, Copy, Check, Info, Share2, Link as LinkIcon, Sparkles } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useDownloads } from '../context/DownloadsContext';
 import { platformDetectorService } from '../../services/PlatformDetectorService';
 import { networkStatusService } from '../../services/network/NetworkStatusService';
 import { TaskState } from '../../domain/models/TaskState';
+import { PlatformType } from '../../domain/models/PlatformType';
+import { YoutubeIcon, TiktokIcon, InstagramIcon, FacebookIcon } from '../components/common/BrandIcons';
 import type { TabType } from '../components/navigation/BottomNavigationBar';
+
+interface DownloadSelection {
+  type: 'video' | 'audio';
+  quality: string;
+  format: 'mp4' | 'mp3';
+}
+
+const QUALITY_OPTIONS: Array<{
+  id: string;
+  label: string;
+  type: 'video' | 'audio';
+  quality: string;
+  format: 'mp4' | 'mp3';
+  badge: string;
+}> = [
+  { id: '1080p', label: '1080p', type: 'video', quality: '1080p', format: 'mp4', badge: 'Full HD' },
+  { id: '720p', label: '720p', type: 'video', quality: '720p', format: 'mp4', badge: 'HD' },
+  { id: '480p', label: '480p', type: 'video', quality: '480p', format: 'mp4', badge: 'SD' },
+  { id: 'mp3', label: 'MP3', type: 'audio', quality: 'mp3', format: 'mp3', badge: 'Audio' },
+];
 
 interface HomeScreenProps {
   onNavigateTab?: (tab: TabType) => void;
@@ -16,9 +39,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
   const [isOnline, setIsOnline] = useState<boolean>(true);
   
-  // Support Modal & About Modal State & Toast State
+  // Support Modal & About Modal State & Toast State & Options Modal State
   const [isSupportModalOpen, setIsSupportModalOpen] = useState<boolean>(false);
   const [isAboutModalOpen, setIsAboutModalOpen] = useState<boolean>(false);
+  const [isOptionsModalOpen, setIsOptionsModalOpen] = useState<boolean>(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const { startDownload, tasks } = useDownloads();
@@ -80,7 +104,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
     }
   };
 
-  const handleDownload = async () => {
+  const handleDownloadClick = () => {
     if (!isOnline) {
       setErrorMessage('No internet connection. Please check your network and try again.');
       return;
@@ -98,11 +122,23 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
     }
 
     setErrorMessage(null);
+    setIsOptionsModalOpen((prev) => !prev);
+  };
+
+  const handleConfirmDownload = async (selection: DownloadSelection) => {
+    setIsOptionsModalOpen(false);
+    const trimmed = urlInput.trim();
+    if (!trimmed) return;
+
     try {
-      const newId = await startDownload(trimmed);
+      const newId = await startDownload(trimmed, {
+        quality: selection.quality,
+        format: selection.format,
+      });
       setCurrentTaskId(newId);
+      showToast(`Downloading ${selection.type.toUpperCase()} (${selection.quality})...`);
     } catch (err: any) {
-      setErrorMessage(err.message || 'Unable to analyze or download video.');
+      setErrorMessage(err.message || 'Unable to download media.');
     }
   };
 
@@ -122,16 +158,34 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
       ? (activeTask.speedBytesPerSec / (1024 * 1024)).toFixed(1)
       : '0';
 
+  const detectedPlatform = urlInput.trim() ? platformDetectorService.detect(urlInput.trim()) : null;
+
+  const renderInputIcon = () => {
+    if (detectedPlatform === PlatformType.YOUTUBE) {
+      return <YoutubeIcon className="w-5 h-5 text-red-600 shrink-0" />;
+    }
+    if (detectedPlatform === PlatformType.TIKTOK) {
+      return <TiktokIcon className="w-5 h-5 text-slate-900 shrink-0" />;
+    }
+    if (detectedPlatform === PlatformType.INSTAGRAM) {
+      return <InstagramIcon className="w-5 h-5 text-pink-600 shrink-0" />;
+    }
+    if (detectedPlatform === PlatformType.FACEBOOK) {
+      return <FacebookIcon className="w-5 h-5 text-blue-600 shrink-0" />;
+    }
+    return <LinkIcon className="w-5 h-5 text-emerald-700 shrink-0" />;
+  };
+
   return (
-    <div className="w-full flex-1 flex flex-col justify-between px-1 py-2 max-w-md mx-auto animate-fadeIn select-none relative min-h-[70vh] text-slate-900">
+    <div className="w-full flex-1 flex flex-col justify-between px-1 py-2 max-w-xl mx-auto animate-fadeIn select-none relative min-h-[70vh] text-slate-900 space-y-4 sm:space-y-6">
       
-      {/* Top Header Row (Info Left, Logo Perfectly Centered, Share & Heart Right) */}
-      <div className="w-full relative flex items-center justify-between z-30 pt-1 pb-2 min-h-[54px]">
-        {/* Info Icon Button (Left Circular Badge) */}
+      {/* Top Header Row (Info Left, Logo Center, Share & Heart Right) */}
+      <div className="w-full relative flex items-center justify-between z-30 pt-1 pb-2 min-h-[56px]">
+        {/* Info Icon Button (Left Badge) */}
         <div className="flex items-center z-10">
           <button
             onClick={() => setIsAboutModalOpen(true)}
-            className="w-10 h-10 rounded-full bg-white shadow-sm border border-emerald-100/90 flex items-center justify-center text-slate-700 hover:bg-emerald-50 active:scale-95 transition-all"
+            className="w-10 h-10 rounded-2xl bg-white/80 backdrop-blur-md shadow-xs border border-emerald-100/90 flex items-center justify-center text-slate-700 hover:bg-emerald-50 hover:border-emerald-300 active:scale-95 transition-all cursor-pointer"
             title="About Tanzeel Pro"
           >
             <Info className="w-5 h-5 text-emerald-800" />
@@ -139,36 +193,38 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
         </div>
 
         {/* Absolutely Centered Logo & App Title Header */}
-        <div className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center justify-center z-0 pointer-events-auto">
-          <div className="w-11 h-11 rounded-2xl p-[2px] bg-gradient-to-b from-amber-300 via-amber-200 to-emerald-300 shadow-md shadow-emerald-950/10 flex items-center justify-center">
-            <div className="w-full h-full bg-white rounded-[14px] p-0.5 flex items-center justify-center">
-              <img src="/logo.png" alt="Tanzeel Pro Logo" className="w-full h-full object-contain" />
+        <div className="absolute left-1/2 -translate-x-1/2 flex items-center justify-center z-0 pointer-events-auto">
+          <div className="flex items-center gap-2 sm:gap-2.5 bg-white/80 backdrop-blur-md px-3.5 py-1.5 rounded-2xl border border-emerald-100/90 shadow-xs hover:border-emerald-300 transition-all">
+            <div className="w-8 h-8 rounded-xl p-[1.5px] bg-gradient-to-tr from-amber-400 via-emerald-400 to-teal-400 shadow-xs flex items-center justify-center shrink-0">
+              <div className="w-full h-full bg-white rounded-[9px] p-0.5 flex items-center justify-center">
+                <img src="/logo.png" alt="Tanzeel Pro Logo" className="w-full h-full object-contain" />
+              </div>
             </div>
-          </div>
-          <div className="text-emerald-950 font-extrabold tracking-[0.2em] text-xs sm:text-sm mt-1 flex items-center justify-center gap-1">
-            <span>T A N Z E E L</span>
-            <span className="text-amber-500 font-bold">•</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-emerald-950 font-black tracking-[0.16em] text-xs sm:text-sm">TANZEEL</span>
+              <span className="bg-gradient-to-r from-amber-500 to-amber-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-md shadow-xs tracking-wider">PRO</span>
+            </div>
           </div>
         </div>
 
         {/* Right Action Icons (Share & Heart Button) */}
         <div className="flex items-center gap-2 z-10">
-          {/* Share Button (Mint Rounded Square) */}
+          {/* Share Button (Mint Glass) */}
           <button
             onClick={handleShareApp}
-            className="w-10 h-10 rounded-2xl bg-emerald-100/70 border border-emerald-200/60 flex items-center justify-center text-emerald-900 hover:bg-emerald-200/80 active:scale-95 transition-all"
+            className="w-10 h-10 rounded-2xl bg-emerald-100/70 backdrop-blur-md border border-emerald-200/80 shadow-xs flex items-center justify-center text-emerald-900 hover:bg-emerald-200/80 active:scale-95 transition-all cursor-pointer"
             title="Share App"
           >
             <Share2 className="w-4 h-4 text-emerald-900" />
           </button>
 
-          {/* Heart Button (White Circular Badge) */}
+          {/* Heart Button (White Glass) */}
           <button
             onClick={() => setIsSupportModalOpen(true)}
-            className="w-10 h-10 rounded-full bg-white shadow-sm border border-emerald-100/90 flex items-center justify-center text-emerald-800 hover:bg-emerald-50 active:scale-95 transition-all"
+            className="w-10 h-10 rounded-2xl bg-white/80 backdrop-blur-md shadow-xs border border-emerald-100/90 flex items-center justify-center text-emerald-800 hover:bg-emerald-50 hover:border-emerald-300 active:scale-95 transition-all group cursor-pointer"
             title="Support TANZEEL App 💚"
           >
-            <Heart className="w-5 h-5 fill-emerald-800 text-emerald-800" />
+            <Heart className="w-4.5 h-4.5 fill-emerald-800 text-emerald-800 group-hover:scale-110 transition-transform" />
           </button>
         </div>
       </div>
@@ -189,35 +245,56 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
         </div>
       )}
 
-      {/* Main Content White Card (Exact Screenshot Design) */}
-      <div className="w-full bg-white rounded-[36px] p-5 sm:p-7 shadow-xl shadow-emerald-950/5 border border-emerald-100/80 max-w-md mx-auto relative overflow-hidden my-auto space-y-3.5">
+      {/* Main Content Card */}
+      <div className="w-full bg-white/95 backdrop-blur-2xl rounded-3xl sm:rounded-[40px] p-6 sm:p-9 shadow-2xl shadow-emerald-950/8 border border-white/90 ring-1 ring-emerald-100/70 max-w-xl mx-auto relative overflow-hidden my-auto space-y-4 sm:space-y-5">
         
         {/* Top Gold Border Line Accent */}
-        <div className="absolute top-0 left-8 right-8 h-[3px] bg-gradient-to-r from-transparent via-amber-300/80 to-transparent opacity-80" />
+        <div className="absolute top-0 inset-x-8 sm:inset-x-16 h-[3px] bg-gradient-to-r from-transparent via-amber-400/90 to-transparent opacity-80" />
 
         {/* 1. Large Arabic Calligraphy Title: سحر التحميل */}
-        <div className="text-center pt-1">
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-emerald-900 font-arabic tracking-wide leading-tight">
+        <div className="text-center pt-1 space-y-2">
+          <h1 className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-950 via-teal-900 to-emerald-900 font-arabic tracking-wide leading-tight drop-shadow-xs">
             سحر التحميل
           </h1>
           
-          <p className="text-xs sm:text-sm text-slate-600 font-medium text-center mt-2 max-w-xs mx-auto leading-relaxed">
+          <p className="text-xs sm:text-sm text-slate-600 font-medium text-center max-w-sm mx-auto leading-relaxed">
             Paste any video link to download in HD quality. Free, fast, no ads.
           </p>
 
+          {/* Supported Platforms Chips */}
+          <div className="flex items-center justify-center flex-wrap gap-1.5 sm:gap-2 pt-1 pb-1">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-red-50 text-red-600 border border-red-200/60 shadow-2xs">
+              <YoutubeIcon className="w-3.5 h-3.5" />
+              <span>YouTube</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-900 text-white border border-slate-700 shadow-2xs">
+              <TiktokIcon className="w-3.5 h-3.5 text-cyan-400" />
+              <span>TikTok</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-pink-50 text-pink-600 border border-pink-200/60 shadow-2xs">
+              <InstagramIcon className="w-3.5 h-3.5 text-pink-600" />
+              <span>Instagram</span>
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-600 border border-blue-200/60 shadow-2xs">
+              <FacebookIcon className="w-3.5 h-3.5 text-blue-600" />
+              <span>Facebook</span>
+            </span>
+          </div>
+
           {/* Downloads Served Counter Pill */}
-          <div className="inline-flex items-center gap-1.5 px-3.5 py-1 bg-emerald-50/90 text-emerald-800 border border-emerald-200/80 rounded-full text-[11px] font-bold mt-2.5 shadow-2xs">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse" />
-            <span>1,247+ downloads served</span>
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 bg-emerald-50/90 text-emerald-800 border border-emerald-200/80 rounded-full text-[11px] font-bold shadow-2xs">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
+            </span>
+            <span>⚡ 1,247+ downloads served • 100% Free & No Ads</span>
           </div>
         </div>
 
-
-
-        {/* 3. Link Input Field (Pill Shape with Link Icon) */}
+        {/* 2. Link Input Field (Pill Shape with Real-time Platform Detection) */}
         <div className="w-full pt-1">
-          <div className="relative w-full rounded-full border-2 border-emerald-500/35 bg-white px-4 py-2.5 sm:py-3 flex items-center gap-2.5 shadow-xs focus-within:border-emerald-600 focus-within:ring-4 focus-within:ring-emerald-500/10 transition-all">
-            <LinkIcon className="w-5 h-5 text-emerald-700 shrink-0" />
+          <div className="relative w-full rounded-full border-2 border-emerald-500/35 bg-white px-4 sm:px-5 py-3 sm:py-3.5 flex items-center gap-3 shadow-xs focus-within:border-emerald-600 focus-within:ring-4 focus-within:ring-emerald-500/10 transition-all">
+            {renderInputIcon()}
             <input
               type="text"
               value={urlInput}
@@ -228,14 +305,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
               }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !isBusy) {
-                  handleDownload();
+                  handleDownloadClick();
                 }
               }}
-              placeholder="Paste link here..."
-              className="w-full bg-transparent text-slate-800 placeholder-slate-400 text-sm font-medium focus:outline-none"
+              placeholder="Paste video link (YouTube, TikTok, Reels, FB)..."
+              className="w-full bg-transparent text-slate-800 placeholder-slate-400 text-sm sm:text-base font-medium focus:outline-none"
             />
 
-            <div className="shrink-0 flex items-center">
+            <div className="shrink-0 flex items-center gap-1.5">
               {urlInput ? (
                 <button
                   onClick={() => {
@@ -243,7 +320,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
                     setErrorMessage(null);
                     setCurrentTaskId(null);
                   }}
-                  className="p-1 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
+                  className="p-1.5 rounded-full text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer"
                   title="Clear"
                 >
                   <X className="w-4 h-4" />
@@ -251,8 +328,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
               ) : (
                 <button
                   onClick={handlePaste}
-                  className="px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center gap-1 hover:bg-emerald-100 active:scale-95 transition-all"
-                  title="Paste link"
+                  className="px-3 py-1.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold flex items-center gap-1.5 hover:bg-emerald-100 active:scale-95 transition-all shadow-2xs cursor-pointer"
+                  title="Paste link from clipboard"
                 >
                   <Clipboard className="w-3.5 h-3.5" />
                   <span>Paste</span>
@@ -269,9 +346,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
             </div>
           ) : activeTask?.state === TaskState.DOWNLOADING ? (
             <div className="w-full pt-3 space-y-1.5 animate-fadeIn">
-              <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+              <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
                 <div
-                  className="h-full bg-emerald-600 rounded-full transition-all duration-200 shadow-sm shadow-emerald-500/50"
+                  className="h-full bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 rounded-full transition-all duration-200 shadow-sm shadow-emerald-500/50"
                   style={{ width: `${activeTask.progressPercent}%` }}
                 />
               </div>
@@ -285,31 +362,93 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
           ) : activeTask?.state === TaskState.COMPLETED ? (
             <div className="mt-2.5 p-2.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold shadow-xs animate-fadeIn flex items-center justify-center gap-2">
               <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              <span>Download complete</span>
+              <span>Download complete!</span>
             </div>
           ) : (
-            <p className="text-xs font-bold text-slate-500 text-center mt-3 animate-pulse">
-              Waiting for a valid link...
+            <p className="text-xs font-semibold text-slate-500 text-center mt-3 animate-pulse flex items-center justify-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+              <span>Waiting for a valid video link...</span>
             </p>
           )}
         </div>
 
-        {/* 4. Giant Circular Download Button (Screenshot Design) */}
+        {/* Format Selection Vertical Slide-up Stack (Clean Black Boxes directly above Download button) */}
+        <AnimatePresence>
+          {isOptionsModalOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: 15, height: 0 }}
+              animate={{ opacity: 1, y: 0, height: 'auto' }}
+              exit={{ opacity: 0, y: 15, height: 0 }}
+              transition={{ duration: 0.22, ease: 'easeOut' }}
+              className="w-full max-w-[260px] sm:max-w-[280px] mx-auto flex flex-col items-center gap-2 pt-2 pb-1 overflow-hidden"
+            >
+              <div className="flex items-center justify-between w-full px-2 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                <span>Select Quality</span>
+                <button
+                  onClick={() => setIsOptionsModalOpen(false)}
+                  className="p-1 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                  title="Close"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              <div className="w-full flex flex-col gap-2">
+                {QUALITY_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.id}
+                    onClick={() => handleConfirmDownload({ type: opt.type, quality: opt.quality, format: opt.format })}
+                    className="w-full py-2.5 sm:py-3 px-5 rounded-2xl bg-slate-950 hover:bg-slate-900 border border-slate-800 hover:border-emerald-500 text-white font-black text-sm sm:text-base tracking-wider shadow-lg shadow-slate-950/20 active:scale-95 transition-all flex items-center justify-between group cursor-pointer"
+                  >
+                    <span className="group-hover:text-emerald-400 transition-colors font-mono">{opt.label}</span>
+                    <span className="text-[10px] font-bold text-slate-400 group-hover:text-emerald-300 bg-slate-900 px-2 py-0.5 rounded-lg border border-slate-800">
+                      {opt.badge}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* 3. Giant Circular Download Button with Ambient Glow */}
         <div className="pt-2 flex justify-center">
-          <button
-            onClick={handleDownload}
-            disabled={isBusy || !urlInput.trim() || !isOnline}
-            className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-400 p-1 shadow-2xl shadow-emerald-600/40 hover:scale-105 active:scale-95 disabled:opacity-40 disabled:scale-100 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center justify-center border-4 border-white/60 group"
-            title="Download Video"
-          >
-            {activeTask?.state === TaskState.ANALYZING || activeTask?.state === TaskState.QUEUED ? (
-              <div className="w-9 h-9 border-3 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : (
-              <Download className="w-10 h-10 sm:w-11 sm:h-11 text-white stroke-[2.5] group-hover:translate-y-0.5 transition-transform" />
-            )}
-          </button>
+          <div className="relative group">
+            <div className="absolute -inset-2 bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-500 rounded-full blur-md opacity-35 group-hover:opacity-75 transition-opacity duration-300" />
+            <button
+              onClick={handleDownloadClick}
+              disabled={isBusy || !urlInput.trim() || !isOnline}
+              className="relative w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-tr from-emerald-600 via-emerald-500 to-teal-400 p-1 shadow-2xl shadow-emerald-600/40 hover:scale-105 active:scale-95 disabled:opacity-40 disabled:scale-100 disabled:cursor-not-allowed transition-all cursor-pointer flex items-center justify-center border-4 border-white/80 group"
+              title="Download Video"
+            >
+              {activeTask?.state === TaskState.ANALYZING || activeTask?.state === TaskState.QUEUED ? (
+                <div className="w-9 h-9 border-3 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <Download className="w-10 h-10 sm:w-11 sm:h-11 text-white stroke-[2.5] group-hover:translate-y-0.5 transition-transform" />
+              )}
+            </button>
+          </div>
         </div>
 
+      </div>
+
+      {/* Feature Highlights beneath Main Card */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-4 max-w-xl mx-auto w-full pt-1 text-center">
+        <div className="p-2 sm:p-2.5 rounded-2xl bg-white/70 backdrop-blur-md border border-emerald-100/90 shadow-2xs flex flex-col items-center">
+          <span className="text-base sm:text-lg">⚡</span>
+          <span className="text-[11px] sm:text-xs font-bold text-slate-800 mt-0.5">Ultra Fast</span>
+          <span className="text-[9px] sm:text-[10px] text-slate-500 font-medium hidden sm:inline">Instant High Speed</span>
+        </div>
+        <div className="p-2 sm:p-2.5 rounded-2xl bg-white/70 backdrop-blur-md border border-emerald-100/90 shadow-2xs flex flex-col items-center">
+          <span className="text-base sm:text-lg">🎬</span>
+          <span className="text-[11px] sm:text-xs font-bold text-slate-800 mt-0.5">Full HD & 4K</span>
+          <span className="text-[9px] sm:text-[10px] text-slate-500 font-medium hidden sm:inline">Original Bitrate</span>
+        </div>
+        <div className="p-2 sm:p-2.5 rounded-2xl bg-white/70 backdrop-blur-md border border-emerald-100/90 shadow-2xs flex flex-col items-center">
+          <span className="text-base sm:text-lg">🛡️</span>
+          <span className="text-[11px] sm:text-xs font-bold text-slate-800 mt-0.5">100% Free</span>
+          <span className="text-[9px] sm:text-[10px] text-slate-500 font-medium hidden sm:inline">No Ads & No Logs</span>
+        </div>
       </div>
 
       <div className="pb-4" />
@@ -487,6 +626,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
         </div>
       )}
 
+      {/* End Main Container */}
     </div>
   );
 };

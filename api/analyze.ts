@@ -27,15 +27,20 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    // Forward to live Render backend
+    // Forward to live Render backend with 5s timeout
     try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 5000);
+
       const renderRes = await fetch(`${BACKEND_URL}/api/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ url }),
+        signal: controller.signal,
       });
+      clearTimeout(timer);
 
       const data = await renderRes.json();
       return sendJson(res, renderRes.status, data);

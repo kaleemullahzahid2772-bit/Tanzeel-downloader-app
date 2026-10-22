@@ -49,12 +49,13 @@ export class TikTokAdapter implements IPlatformAdapter {
     };
   }
 
-  public async createMediaStream(url: string, _formatId?: string): Promise<StreamMediaResult> {
+  public async createMediaStream(url: string, formatId?: string): Promise<StreamMediaResult> {
     const meta = await this.extractMetadata(url);
-    const filename = `${meta.title.replace(/[^a-zA-Z0-9_]/g, '_')}.mp4`;
+    const isAudio = formatId?.toLowerCase() === 'mp3' || formatId?.toLowerCase() === 'audio';
+    const filename = `${meta.title.replace(/[^a-zA-Z0-9_]/g, '_')}.${isAudio ? 'mp3' : 'mp4'}`;
 
     // 1. Try real yt-dlp binary stream output (guaranteed real video)
-    const ytDlpStream = ytDlpExtractorService.createMediaStream(url, meta.title);
+    const ytDlpStream = await ytDlpExtractorService.createMediaStream(url, meta.title, formatId);
     if (ytDlpStream && ytDlpStream.stream) {
       return ytDlpStream;
     }

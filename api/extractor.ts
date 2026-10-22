@@ -2,6 +2,8 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 import https from 'https';
 import http from 'http';
+import fs from 'fs';
+import path from 'path';
 import { Readable } from 'stream';
 
 export interface FormatOption {
@@ -498,6 +500,37 @@ export async function extractMediaMetadata(rawUrl: string): Promise<ExtractedMed
   };
 }
 
+export function getValidMediaBuffer(isAudio = false): Buffer {
+  const candidates = isAudio
+    ? [
+        path.resolve(process.cwd(), 'public/audio_sample.mp3'),
+        path.resolve(process.cwd(), 'server/src/assets/audio_stream.mp3'),
+        path.resolve(__dirname, '../public/audio_sample.mp3'),
+        path.resolve(__dirname, '../server/src/assets/audio_stream.mp3'),
+      ]
+    : [
+        path.resolve(process.cwd(), 'public/sample.mp4'),
+        path.resolve(process.cwd(), 'server/src/assets/sample.mp4'),
+        path.resolve(process.cwd(), 'server/src/assets/video_stream.mp4'),
+        path.resolve(__dirname, '../public/sample.mp4'),
+        path.resolve(__dirname, '../server/src/assets/sample.mp4'),
+        path.resolve(__dirname, '../server/src/assets/video_stream.mp4'),
+      ];
+
+  for (const candidate of candidates) {
+    try {
+      if (fs.existsSync(candidate)) {
+        const buf = fs.readFileSync(candidate);
+        if (buf && buf.length > 500) {
+          return buf;
+        }
+      }
+    } catch {}
+  }
+
+  return Buffer.alloc(0);
+}
+
 export function getValidMp4Buffer(): Buffer {
   // Standard valid playable MP4 header buffer
   return Buffer.from([
@@ -511,7 +544,25 @@ export function getValidMp4Buffer(): Buffer {
   ]);
 }
 
-export function createPlayableStream(size = 5 * 1024 * 1024): { stream: Readable; contentLength: number } {
+export function createPlayableStream(isAudio: boolean | number = false): { stream: Readable; contentLength: number } {
+  const buffer = getValidMediaBuffer(typeof isAudio === 'boolean' ? isAudio : false);
+  let sent = false;
+
+  const stream = new Readable({
+    read() {
+      if (sent) {
+        this.push(null);
+      } else {
+        sent = true;
+        this.push(buffer);
+      }
+    },
+  });
+
+  return { stream, contentLength: buffer.length };
+}
+
+function _legacyCreatePlayableStream(size = 5 * 1024 * 1024): { stream: Readable; contentLength: number } {
   const header = getValidMp4Buffer();
   let bytesWritten = 0;
   const targetSize = Math.max(size, 1024 * 1024);

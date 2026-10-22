@@ -7,7 +7,7 @@ interface DownloadsContextType {
   tasks: DownloadTaskItem[];
   activeFilter: TaskState | 'all';
   setActiveFilter: (filter: TaskState | 'all') => void;
-  startDownload: (url: string) => Promise<string>;
+  startDownload: (url: string, options?: { quality?: string; format?: 'mp4' | 'mp3' }) => Promise<string>;
   pauseTask: (id: string) => void;
   resumeTask: (id: string) => void;
   cancelTask: (id: string) => void;
@@ -31,8 +31,8 @@ export const DownloadsProvider: React.FC<{ children: React.ReactNode }> = ({ chi
     return unsubscribe;
   }, []);
 
-  const startDownload = async (url: string) => {
-    return downloadManager.startDownload(url);
+  const startDownload = async (url: string, options?: { quality?: string; format?: 'mp4' | 'mp3' }) => {
+    return downloadManager.startDownload(url, options);
   };
 
   const pauseTask = (id: string) => downloadManager.pauseDownload(id);

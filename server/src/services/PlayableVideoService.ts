@@ -3,51 +3,85 @@ import path from 'path';
 import { Readable } from 'stream';
 
 export class PlayableVideoService {
-  private static cachedBuffer: Buffer | null = null;
+  private static cachedVideoBuffer: Buffer | null = null;
+  private static cachedAudioBuffer: Buffer | null = null;
 
   public static getValidMp4Buffer(): Buffer {
-    if (this.cachedBuffer && this.cachedBuffer.length > 1000) {
-      return this.cachedBuffer;
+    if (this.cachedVideoBuffer && this.cachedVideoBuffer.length > 1000) {
+      return this.cachedVideoBuffer;
     }
 
-    try {
-      const assetPath = path.resolve(__dirname, '../assets/video_stream.mp4');
-      if (fs.existsSync(assetPath)) {
-        const fileBuffer = fs.readFileSync(assetPath);
-        if (fileBuffer && fileBuffer.length > 1000) {
-          this.cachedBuffer = fileBuffer;
-          return fileBuffer;
+    const candidates = [
+      path.resolve(__dirname, '../assets/video_stream.mp4'),
+      path.resolve(__dirname, '../../src/assets/video_stream.mp4'),
+      path.resolve(__dirname, '../../../server/src/assets/video_stream.mp4'),
+      path.resolve(process.cwd(), 'server/src/assets/video_stream.mp4'),
+      path.resolve(process.cwd(), 'server/dist/assets/video_stream.mp4'),
+      path.resolve(__dirname, '../assets/sample.mp4'),
+      path.resolve(__dirname, '../../src/assets/sample.mp4'),
+      path.resolve(process.cwd(), 'server/src/assets/sample.mp4'),
+      path.resolve(process.cwd(), 'public/sample.mp4'),
+    ];
+
+    for (const p of candidates) {
+      try {
+        if (fs.existsSync(p)) {
+          const fileBuffer = fs.readFileSync(p);
+          if (fileBuffer && fileBuffer.length > 1000) {
+            this.cachedVideoBuffer = fileBuffer;
+            return fileBuffer;
+          }
         }
+      } catch {
+        // Continue searching
       }
-    } catch {
-      // Fallback
     }
 
-    // Fallback valid ftyp atom box header
-    return Buffer.from([
-      0x00, 0x00, 0x00, 0x1c, // length 28
-      0x66, 0x74, 0x79, 0x70, // 'ftyp'
-      0x69, 0x73, 0x6f, 0x6d, // 'isom'
-      0x00, 0x00, 0x02, 0x00, // version
-      0x69, 0x73, 0x6f, 0x6d, // 'isom'
-      0x69, 0x73, 0x6f, 0x32, // 'iso2'
-      0x6d, 0x70, 0x34, 0x31  // 'mp41'
-    ]);
+    return Buffer.alloc(0);
   }
 
-  public static createPlayableStream(_requestedSizeBytes?: number): { stream: Readable; contentLength: number; isExactLength?: boolean } {
-    const videoBuffer = this.getValidMp4Buffer();
-    const contentLength = videoBuffer.length;
+  public static getValidMp3Buffer(): Buffer {
+    if (this.cachedAudioBuffer && this.cachedAudioBuffer.length > 500) {
+      return this.cachedAudioBuffer;
+    }
+
+    const candidates = [
+      path.resolve(__dirname, '../assets/audio_stream.mp3'),
+      path.resolve(__dirname, '../../src/assets/audio_stream.mp3'),
+      path.resolve(__dirname, '../../../server/src/assets/audio_stream.mp3'),
+      path.resolve(process.cwd(), 'server/src/assets/audio_stream.mp3'),
+      path.resolve(process.cwd(), 'public/audio_sample.mp3'),
+    ];
+
+    for (const p of candidates) {
+      try {
+        if (fs.existsSync(p)) {
+          const fileBuffer = fs.readFileSync(p);
+          if (fileBuffer && fileBuffer.length > 500) {
+            this.cachedAudioBuffer = fileBuffer;
+            return fileBuffer;
+          }
+        }
+      } catch {
+        // Continue searching
+      }
+    }
+
+    return Buffer.alloc(0);
+  }
+
+  public static createPlayableStream(isAudio = false): { stream: Readable; contentLength: number; isExactLength?: boolean } {
+    const buffer = isAudio ? this.getValidMp3Buffer() : this.getValidMp4Buffer();
+    const contentLength = buffer.length;
 
     let sent = false;
-
     const stream = new Readable({
       read() {
         if (sent) {
           this.push(null);
         } else {
           sent = true;
-          this.push(videoBuffer);
+          this.push(buffer);
         }
       },
     });

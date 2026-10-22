@@ -4,9 +4,10 @@ import { tempFileManager } from '../services/TempFileManager';
 
 export const downloadRouter = Router();
 
-downloadRouter.post('/download', async (req: Request, res: Response, next: NextFunction) => {
+downloadRouter.all('/download', async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { url, quality } = req.body || {};
+    const url = (req.query.url as string) || req.body?.url;
+    const quality = (req.query.quality as string) || req.body?.quality;
 
     if (!url || typeof url !== 'string' || !url.trim()) {
       return res.status(400).json({

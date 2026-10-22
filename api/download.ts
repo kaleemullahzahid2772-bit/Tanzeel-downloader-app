@@ -13,14 +13,32 @@ export default async function handler(req: any, res: any) {
     return res.end();
   }
 
-  if (req.method !== 'POST') {
-    return sendJson(res, 405, { success: false, error: 'Method not allowed. Use POST.' });
+  if (req.method !== 'POST' && req.method !== 'GET') {
+    return sendJson(res, 405, { success: false, error: 'Method not allowed. Use GET or POST.' });
   }
 
   try {
-    const body = await parseBody(req);
-    const url = body?.url;
-    const quality = body?.quality;
+    let url = req.query?.url;
+    let quality = req.query?.quality;
+    let format = req.query?.format;
+
+    if (!url && req.url && req.url.includes('?')) {
+      try {
+        const parsedUrl = new URL(req.url, 'http://localhost');
+        url = parsedUrl.searchParams.get('url') || undefined;
+        quality = parsedUrl.searchParams.get('quality') || quality;
+        format = parsedUrl.searchParams.get('format') || format;
+      } catch {
+        // Fallback
+      }
+    }
+
+    if (!url && req.method === 'POST') {
+      const body = await parseBody(req);
+      url = body?.url;
+      quality = body?.quality || quality;
+      format = body?.format || format;
+    }
 
     if (!url || typeof url !== 'string' || !url.trim()) {
       return sendJson(res, 400, {
@@ -29,16 +47,21 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    // Try live Render backend first
+    // Try live Render backend first with 6s timeout to prevent hanging
     try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 6000);
+
       const backendRes = await fetch(`${BACKEND_URL}/api/download`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(req.headers.range ? { Range: req.headers.range } : {}),
         },
-        body: JSON.stringify({ url, quality }),
+        body: JSON.stringify({ url, quality, format }),
+        signal: controller.signal,
       });
+      clearTimeout(timer);
 
       if (backendRes.ok && backendRes.body) {
         res.statusCode = backendRes.status;
@@ -56,7 +79,7 @@ export default async function handler(req: any, res: any) {
 
     const meta = await extractMediaMetadata(url);
     const safeTitle = (meta.title || 'video_download').replace(/[^a-zA-Z0-9_\-]/g, '_');
-    const isAudio = quality?.includes('audio') || quality?.includes('mp3');
+    const isAudio = format === 'mp3' || quality?.includes('audio') || quality?.includes('mp3');
     const ext = isAudio ? 'mp3' : 'mp4';
     const filename = `${safeTitle}.${ext}`;
 
@@ -78,7 +101,7 @@ export default async function handler(req: any, res: any) {
     }
 
     // Playable stream fallback
-    const { stream, contentLength } = createPlayableStream();
+    const { stream, contentLength } = createPlayableStream(isAudio);
     res.statusCode = 200;
     res.setHeader('Content-Type', isAudio ? 'audio/mpeg' : 'video/mp4');
     res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);

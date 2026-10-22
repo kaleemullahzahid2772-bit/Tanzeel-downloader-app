@@ -89,17 +89,17 @@ export const StatusScreen: React.FC = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto px-4 py-6 space-y-6 animate-fadeIn pb-24 select-none text-slate-900">
+    <div className="w-full max-w-2xl sm:max-w-3xl mx-auto px-2 sm:px-4 py-4 sm:py-6 space-y-6 animate-fadeIn pb-24 select-none text-slate-900">
       
       {/* Screen Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center">
-            <ImageIcon className="w-5 h-5 text-emerald-600" />
+      <div className="flex items-center justify-between bg-white/80 backdrop-blur-md p-4 rounded-3xl border border-emerald-100/80 shadow-xs">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-center shadow-xs">
+            <ImageIcon className="w-5 h-5 text-emerald-700" />
           </div>
           <div>
-            <h2 className="font-extrabold text-lg text-slate-900 tracking-tight">WhatsApp Status</h2>
-            <p className="text-[11px] text-slate-500">Save and share viewable status media</p>
+            <h2 className="font-extrabold text-base sm:text-lg text-slate-900 tracking-tight">WhatsApp Status</h2>
+            <p className="text-xs text-slate-500">Save & share viewable status media directly</p>
           </div>
         </div>
 
@@ -107,10 +107,10 @@ export const StatusScreen: React.FC = () => {
           <button
             onClick={loadStatuses}
             disabled={isRefreshing}
-            className="p-2.5 rounded-xl bg-white border border-slate-200 text-slate-700 hover:text-slate-900 disabled:opacity-50 transition-all flex items-center gap-1.5 text-xs font-semibold shadow-sm"
+            className="p-2.5 px-3.5 rounded-2xl bg-emerald-50/80 hover:bg-emerald-100/80 border border-emerald-200 text-emerald-900 disabled:opacity-50 transition-all flex items-center gap-1.5 text-xs font-bold shadow-xs cursor-pointer active:scale-95"
             title="Refresh statuses"
           >
-            <RefreshCw className={`w-4 h-4 text-emerald-600 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 text-emerald-700 ${isRefreshing ? 'animate-spin' : ''}`} />
             <span>Refresh</span>
           </button>
         )}
@@ -118,7 +118,7 @@ export const StatusScreen: React.FC = () => {
 
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold flex items-center gap-2 animate-fadeIn shadow-sm">
+        <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold flex items-center gap-2 animate-fadeIn shadow-sm">
           <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
           <span>{toastMessage}</span>
         </div>
@@ -126,20 +126,20 @@ export const StatusScreen: React.FC = () => {
 
       {/* State 1: PERMISSION_REQUIRED */}
       {uiState === 'PERMISSION_REQUIRED' && (
-        <div className="text-center py-12 px-6 bg-white border border-slate-200/90 rounded-3xl space-y-4 shadow-xl">
-          <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-200 mx-auto flex items-center justify-center">
-            <ShieldAlert className="w-7 h-7 text-emerald-600" />
+        <div className="text-center py-12 px-6 bg-white/95 backdrop-blur-xl border border-emerald-100 rounded-3xl space-y-4 shadow-xl shadow-emerald-950/5">
+          <div className="w-16 h-16 rounded-2xl bg-emerald-50 border border-emerald-200 mx-auto flex items-center justify-center shadow-xs">
+            <ShieldAlert className="w-8 h-8 text-emerald-600" />
           </div>
           <div className="space-y-1">
-            <h3 className="font-bold text-base text-slate-900">Storage Access Required</h3>
-            <p className="text-xs text-slate-500 max-w-xs mx-auto">
-              Allow access to view available WhatsApp Status media stored locally on your device.
+            <h3 className="font-bold text-lg text-slate-900">Storage Access Required</h3>
+            <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
+              Allow storage access to view and save WhatsApp Status media stored locally on your device.
             </p>
           </div>
 
           <button
             onClick={handleGrantAccess}
-            className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-600 text-white font-bold text-sm shadow-lg shadow-emerald-600/25 transition-all active:scale-95"
+            className="w-full max-w-xs mx-auto py-3.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-600 text-white font-bold text-sm shadow-lg shadow-emerald-600/25 transition-all active:scale-95 cursor-pointer block"
           >
             Grant Access
           </button>
@@ -148,15 +148,15 @@ export const StatusScreen: React.FC = () => {
 
       {/* State 2: LOADING */}
       {uiState === 'LOADING' && (
-        <div className="text-center py-16 px-4 bg-white/80 border border-slate-200 rounded-3xl space-y-3 shadow-sm">
-          <div className="w-6 h-6 border-2 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs font-semibold text-slate-500">Checking for statuses...</p>
+        <div className="text-center py-16 px-4 bg-white/80 backdrop-blur-md border border-emerald-100 rounded-3xl space-y-3 shadow-xs">
+          <div className="w-8 h-8 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs font-bold text-slate-600">Scanning for WhatsApp statuses...</p>
         </div>
       )}
 
       {/* State 3: SUCCESS (Grid Display) */}
       {uiState === 'SUCCESS' && (
-        <div className="grid grid-cols-3 gap-2.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
           {statuses.map((item) => (
             <StatusMediaCard
               key={item.id}
@@ -173,18 +173,18 @@ export const StatusScreen: React.FC = () => {
 
       {/* State 4: EMPTY */}
       {uiState === 'EMPTY' && (
-        <div className="text-center py-16 px-4 bg-white/80 border border-slate-200 rounded-3xl space-y-3 shadow-sm">
-          <div className="w-12 h-12 rounded-2xl bg-slate-100 border border-slate-200 mx-auto flex items-center justify-center">
-            <ImageIcon className="w-6 h-6 text-slate-400" />
+        <div className="text-center py-16 px-4 bg-white/85 backdrop-blur-md border border-emerald-100 rounded-3xl space-y-3 shadow-xs">
+          <div className="w-14 h-14 rounded-2xl bg-emerald-50 border border-emerald-200/80 mx-auto flex items-center justify-center">
+            <ImageIcon className="w-7 h-7 text-emerald-500" />
           </div>
-          <h3 className="font-bold text-sm text-slate-700">No WhatsApp Statuses Found</h3>
+          <h3 className="font-bold text-base text-slate-800">No WhatsApp Statuses Found</h3>
           <p className="text-xs text-slate-500 max-w-xs mx-auto">
-            Open WhatsApp and view statuses first, then tap Refresh.
+            Open WhatsApp and view statuses first, then return here and tap Refresh.
           </p>
 
           <button
             onClick={loadStatuses}
-            className="px-4 py-2 rounded-xl bg-slate-100 text-slate-700 text-xs font-semibold hover:bg-slate-200 transition-all border border-slate-200"
+            className="px-5 py-2.5 rounded-2xl bg-emerald-600 text-white text-xs font-bold hover:bg-emerald-700 transition-all shadow-md shadow-emerald-600/20 active:scale-95 cursor-pointer"
           >
             Refresh
           </button>
@@ -198,7 +198,7 @@ export const StatusScreen: React.FC = () => {
           <p className="text-xs text-slate-600">Something went wrong while scanning device storage.</p>
           <button
             onClick={loadStatuses}
-            className="px-4 py-2 rounded-xl bg-slate-100 text-slate-800 text-xs font-semibold border border-slate-200"
+            className="px-5 py-2.5 rounded-2xl bg-slate-900 text-white text-xs font-bold transition-all shadow-md active:scale-95 cursor-pointer"
           >
             Try Again
           </button>

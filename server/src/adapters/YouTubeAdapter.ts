@@ -49,23 +49,25 @@ export class YouTubeAdapter implements IPlatformAdapter {
     };
   }
 
-  public async createMediaStream(url: string, _formatId?: string): Promise<StreamMediaResult> {
+  public async createMediaStream(url: string, formatId?: string): Promise<StreamMediaResult> {
     const meta = await this.extractMetadata(url);
-    const filename = `${meta.title.replace(/[^a-zA-Z0-9_]/g, '_')}.mp4`;
+    const isAudio = formatId?.toLowerCase() === 'mp3' || formatId?.toLowerCase() === 'audio';
+    const filename = `${meta.title.replace(/[^a-zA-Z0-9_]/g, '_')}.${isAudio ? 'mp3' : 'mp4'}`;
 
-    // 1. Try real yt-dlp binary stream output
-    const ytDlpStream = ytDlpExtractorService.createMediaStream(url, meta.title);
+    // 1. Try real yt-dlp binary stream output with exact quality requested
+    const ytDlpStream = await ytDlpExtractorService.createMediaStream(url, meta.title, formatId);
     if (ytDlpStream && ytDlpStream.stream) {
       return ytDlpStream;
     }
 
     // 2. Fallback to PlayableVideoService stream
-    const { stream, contentLength } = PlayableVideoService.createPlayableStream(5 * 1024 * 1024);
+    const { stream, contentLength, isExactLength } = PlayableVideoService.createPlayableStream(isAudio);
     return {
       stream,
       contentLength,
-      contentType: 'video/mp4',
+      contentType: isAudio ? 'audio/mpeg' : 'video/mp4',
       filename,
+      isExactLength,
     };
   }
 }

@@ -1,6 +1,7 @@
 import { execFile, spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
+import { PassThrough } from 'stream';
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 import { MediaMetadata } from '../domain/models/MediaMetadata';
 import { StreamMediaResult } from '../domain/interfaces/IPlatformAdapter';
@@ -40,22 +41,31 @@ export class YtDlpExtractorService {
     }
 
     const lowerUrl = url.toLowerCase();
+    const isYouTube = lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be');
     let referer = 'https://www.google.com/';
     if (lowerUrl.includes('tiktok')) referer = 'https://www.tiktok.com/';
     if (lowerUrl.includes('facebook') || lowerUrl.includes('fb.watch') || lowerUrl.includes('fb.com')) referer = 'https://www.facebook.com/';
 
+    const args = [
+      '--dump-single-json',
+      '--no-warnings',
+      '--no-playlist',
+      '--no-check-certificate',
+      '--no-update',
+      '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      '--referer', referer,
+    ];
+
+    if (isYouTube) {
+      args.push('--extractor-args', 'youtube:player_client=android');
+    }
+
+    args.push(url);
+
     return new Promise((resolve) => {
       execFile(
         this.ytDlpPath,
-        [
-          '--dump-single-json',
-          '--no-warnings',
-          '--no-playlist',
-          '--no-check-certificates',
-          '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          '--referer', referer,
-          url,
-        ],
+        args,
         { timeout: 15000, maxBuffer: 10 * 1024 * 1024 },
         (err, stdout) => {
           if (err || !stdout) {
@@ -104,7 +114,7 @@ export class YtDlpExtractorService {
     });
   }
 
-  public createMediaStream(url: string, title?: string): StreamMediaResult | null {
+  public async createMediaStream(url: string, title?: string, quality?: string): Promise<StreamMediaResult | null> {
     if (!this.isAvailable()) return null;
 
     // Fast skip for test mock URLs
@@ -112,8 +122,9 @@ export class YtDlpExtractorService {
       return null;
     }
 
-    const safeTitle = (title || 'original_video').replace(/[^a-zA-Z0-9_]/g, '_');
-    const filename = `${safeTitle}.mp4`;
+    const isAudio = quality?.toLowerCase() === 'mp3' || quality?.toLowerCase() === 'audio';
+    const safeTitle = (title || 'video').replace(/[^a-zA-Z0-9_]/g, '_');
+    const filename = `${safeTitle}.${isAudio ? 'mp3' : 'mp4'}`;
 
     const lowerUrl = url.toLowerCase();
     const isYouTube = lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be');
@@ -126,9 +137,22 @@ export class YtDlpExtractorService {
 
     const ffmpegBinary = ffmpegInstaller?.path && fs.existsSync(ffmpegInstaller.path) ? ffmpegInstaller.path : null;
 
-    // Format selection priority:
+    // Format selection priority
     let formatString = 'bv*[vcodec^=avc1]+ba[acodec^=mp4a]/18/b[ext=mp4]/bestvideo+bestaudio/best';
-    if (isTikTok) {
+    if (isAudio) {
+      formatString = isYouTube ? 'ba/18/b' : 'ba/b';
+    } else if (isYouTube) {
+      // YouTube streams format 18 (pre-muxed H.264/AAC MP4) reliably without 403 or SABR failures
+      formatString = '18/b[ext=mp4]/best';
+    } else if (quality === '1080p') {
+      formatString = 'bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=1080]+bestaudio/best[height<=1080]/best';
+    } else if (quality === '720p') {
+      formatString = 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=720]+bestaudio/best[height<=720]/best';
+    } else if (quality === '480p') {
+      formatString = 'bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=480]+bestaudio/best[height<=480]/best';
+    } else if (quality === '360p') {
+      formatString = 'bestvideo[height<=360][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=360]+bestaudio/best[height<=360]/best';
+    } else if (isTikTok) {
       formatString = 'bv*[vcodec*=h264]+ba/b[vcodec*=h264]/[format_id^=h264]/bv*[vcodec^=avc1]+ba/b[vcodec^=avc1]/best';
     }
 
@@ -138,10 +162,19 @@ export class YtDlpExtractorService {
       '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       '--referer', referer,
       '--no-playlist',
-      '--no-check-certificates',
+      '--no-check-certificate',
+      '--no-update',
       '--quiet',
       '--no-warnings',
     ];
+
+    if (isYouTube) {
+      args.push('--extractor-args', 'youtube:player_client=android');
+    }
+
+    if (isAudio) {
+      args.push('-x', '--audio-format', 'mp3');
+    }
 
     if (ffmpegBinary) {
       args.push('--ffmpeg-location', ffmpegBinary);
@@ -149,20 +182,57 @@ export class YtDlpExtractorService {
 
     args.push(url);
 
-    try {
-      const ytDlpProc = spawn(this.ytDlpPath, args);
+    return new Promise<StreamMediaResult | null>((resolve) => {
+      try {
+        const ytDlpProc = spawn(this.ytDlpPath, args);
+        let resolved = false;
 
-      ytDlpProc.on('error', (err) => console.error('[ytDlpError]', err));
+        const timeoutTimer = setTimeout(() => {
+          if (!resolved) {
+            resolved = true;
+            try { ytDlpProc.kill(); } catch {}
+            resolve(null);
+          }
+        }, 15000);
 
-      return {
-        stream: ytDlpProc.stdout,
-        contentLength: 25 * 1024 * 1024,
-        contentType: 'video/mp4',
-        filename,
-      };
-    } catch {
-      return null;
-    }
+        ytDlpProc.stdout.once('data', (firstChunk: Buffer) => {
+          if (!resolved) {
+            resolved = true;
+            clearTimeout(timeoutTimer);
+
+            const passThrough = new PassThrough();
+            passThrough.write(firstChunk);
+            ytDlpProc.stdout.pipe(passThrough);
+
+            resolve({
+              stream: passThrough,
+              contentLength: isAudio ? 5 * 1024 * 1024 : 25 * 1024 * 1024,
+              contentType: isAudio ? 'audio/mpeg' : 'video/mp4',
+              filename,
+            });
+          }
+        });
+
+        ytDlpProc.once('close', (code: number | null) => {
+          if (!resolved) {
+            resolved = true;
+            clearTimeout(timeoutTimer);
+            resolve(null);
+          }
+        });
+
+        ytDlpProc.once('error', (err: any) => {
+          console.error('[ytDlpError]', err);
+          if (!resolved) {
+            resolved = true;
+            clearTimeout(timeoutTimer);
+            resolve(null);
+          }
+        });
+      } catch {
+        resolve(null);
+      }
+    });
   }
 }
 

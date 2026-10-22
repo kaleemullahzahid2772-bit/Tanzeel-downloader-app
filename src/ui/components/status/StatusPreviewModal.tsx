@@ -57,13 +57,13 @@ export const StatusPreviewModal: React.FC<StatusPreviewModalProps> = ({
       </div>
 
       {/* Bottom Actions Bar */}
-      <div className="flex items-center justify-center gap-3 py-2 z-10">
+      <div className="flex items-center justify-center gap-3 py-2 z-10 max-w-md mx-auto w-full">
         <button
           onClick={() => onSave(item)}
-          className={`flex-1 py-3 px-6 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-xl transition-all active:scale-95 ${
+          className={`flex-1 py-3.5 px-6 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-xl transition-all active:scale-95 cursor-pointer ${
             item.isSaved
               ? 'bg-emerald-600 text-white shadow-emerald-600/30'
-              : 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-purple-600/30'
+              : 'bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-600 text-white shadow-emerald-600/30'
           }`}
         >
           {item.isSaved ? (
@@ -81,10 +81,10 @@ export const StatusPreviewModal: React.FC<StatusPreviewModalProps> = ({
 
         <button
           onClick={() => onShare(item)}
-          className="py-3 px-5 rounded-2xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-200 font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95"
+          className="py-3.5 px-5 rounded-2xl bg-slate-900 border border-slate-800 hover:border-slate-700 text-slate-200 font-bold text-sm flex items-center justify-center gap-2 shadow-lg transition-all active:scale-95 cursor-pointer"
           title="Share Status"
         >
-          <Share2 className="w-4 h-4 text-purple-400" />
+          <Share2 className="w-4 h-4 text-emerald-400" />
           <span>Share</span>
         </button>
       </div>

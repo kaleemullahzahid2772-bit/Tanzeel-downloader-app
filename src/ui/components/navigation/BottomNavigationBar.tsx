@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, MessageSquare } from 'lucide-react';
+import { Download, MessageSquare } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export type TabType = 'home' | 'status';
@@ -15,13 +15,13 @@ export const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
   setActiveTab,
 }) => {
   const tabs = [
-    { id: 'home' as TabType, label: 'Home', icon: Home },
-    { id: 'status' as TabType, label: 'Status', icon: MessageSquare },
+    { id: 'home' as TabType, label: 'Downloader', icon: Download },
+    { id: 'status' as TabType, label: 'WhatsApp Status', icon: MessageSquare },
   ];
 
   return (
-    <nav className="absolute md:absolute fixed bottom-0 left-0 right-0 z-40 bg-white/90 backdrop-blur-xl border-t border-emerald-100 shadow-lg px-4 py-2">
-      <div className="max-w-xs mx-auto flex items-center justify-around">
+    <nav className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 bg-white/85 backdrop-blur-2xl border border-white/90 shadow-2xl shadow-emerald-950/15 rounded-full p-1.5 flex items-center justify-center ring-1 ring-emerald-500/10">
+      <div className="flex items-center gap-1 sm:gap-1.5">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           const isActive = activeTab === tab.id;
@@ -30,33 +30,31 @@ export const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className="relative flex flex-col items-center py-1.5 px-6 rounded-2xl transition-all duration-200 group"
+              className="relative flex items-center gap-2 py-2 px-4 sm:px-6 rounded-full transition-all duration-300 group cursor-pointer"
             >
               {/* Active Indicator Background pill */}
               {isActive && (
                 <motion.div
                   layoutId="activeTabPill"
-                  className="absolute inset-0 bg-emerald-500/15 border border-emerald-500/30 rounded-2xl shadow-sm shadow-emerald-500/10"
-                  transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                  className="absolute inset-0 bg-gradient-to-r from-emerald-500/15 via-emerald-600/15 to-teal-500/15 border border-emerald-500/30 rounded-full shadow-xs"
+                  transition={{ type: 'spring', stiffness: 450, damping: 32 }}
                 />
               )}
 
-              <div className="relative z-10 flex flex-col items-center">
-                <Icon
-                  className={`w-5 h-5 transition-transform duration-200 ${
-                    isActive
-                      ? 'text-emerald-700 scale-110'
-                      : 'text-slate-500 group-hover:text-slate-800'
-                  }`}
-                />
-                <span
-                  className={`text-[11px] mt-1 font-medium tracking-tight transition-colors ${
-                    isActive ? 'text-emerald-800 font-bold' : 'text-slate-500 group-hover:text-slate-800'
-                  }`}
-                >
-                  {tab.label}
-                </span>
-              </div>
+              <Icon
+                className={`w-4.5 h-4.5 transition-all duration-200 relative z-10 ${
+                  isActive
+                    ? 'text-emerald-700 scale-110'
+                    : 'text-slate-400 group-hover:text-slate-700'
+                }`}
+              />
+              <span
+                className={`text-xs tracking-tight transition-colors relative z-10 ${
+                  isActive ? 'text-emerald-950 font-bold' : 'text-slate-500 font-semibold group-hover:text-slate-800'
+                }`}
+              >
+                {tab.label}
+              </span>
             </button>
           );
         })}
