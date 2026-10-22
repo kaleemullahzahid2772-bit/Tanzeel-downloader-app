@@ -13,6 +13,7 @@ import { useSettings } from '../context/SettingsContext';
 import { useTheme } from '../context/ThemeContext';
 import { StorageManagementCard } from '../components/settings/StorageManagementCard';
 import { LegalNoticesCard } from '../components/settings/LegalNoticesCard';
+import { PwaInstallCard } from '../components/settings/PwaInstallCard';
 import { envConfig } from '../../config/env.config';
 
 export const SettingsScreen: React.FC = () => {
@@ -120,6 +121,9 @@ export const SettingsScreen: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* PWA App Installation */}
+      <PwaInstallCard />
 
       {/* Section 2: Storage & Usage */}
       <StorageManagementCard />

@@ -7,6 +7,7 @@ import { networkStatusService } from '../../services/network/NetworkStatusServic
 import { TaskState } from '../../domain/models/TaskState';
 import { PlatformType } from '../../domain/models/PlatformType';
 import { YoutubeIcon, TiktokIcon, InstagramIcon, FacebookIcon } from '../components/common/BrandIcons';
+import { PwaInstallBanner } from '../components/common/PwaInstallBanner';
 import type { TabType } from '../components/navigation/BottomNavigationBar';
 
 interface DownloadSelection {
@@ -244,6 +245,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
           <span>Offline Mode — Local downloads & WhatsApp statuses remain viewable.</span>
         </div>
       )}
+
+      {/* PWA Install Banner (When Installable) */}
+      <PwaInstallBanner />
 
       {/* Main Content Card */}
       <div className="w-full bg-white/95 backdrop-blur-2xl rounded-3xl sm:rounded-[40px] p-6 sm:p-9 shadow-2xl shadow-emerald-950/8 border border-white/90 ring-1 ring-emerald-100/70 max-w-xl mx-auto relative overflow-hidden my-auto space-y-4 sm:space-y-5">
