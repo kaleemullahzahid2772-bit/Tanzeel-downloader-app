@@ -27,10 +27,10 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    // Forward to live Render backend with 5s timeout
+    // Forward to live Render backend with 15s timeout for cold start resilience
     try {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 5000);
+      const timer = setTimeout(() => controller.abort(), 15000);
 
       const renderRes = await fetch(`${BACKEND_URL}/api/analyze`, {
         method: 'POST',
@@ -42,8 +42,10 @@ export default async function handler(req: any, res: any) {
       });
       clearTimeout(timer);
 
-      const data = await renderRes.json();
-      return sendJson(res, renderRes.status, data);
+      if (renderRes.ok) {
+        const data = await renderRes.json();
+        return sendJson(res, renderRes.status, data);
+      }
     } catch (proxyError: any) {
       console.warn('[Proxy to Render failed, fallback to local extractor]:', proxyError?.message);
     }

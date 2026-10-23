@@ -500,34 +500,7 @@ export async function extractMediaMetadata(rawUrl: string): Promise<ExtractedMed
   };
 }
 
-export function getValidMediaBuffer(isAudio = false): Buffer {
-  const candidates = isAudio
-    ? [
-        path.resolve(process.cwd(), 'public/audio_sample.mp3'),
-        path.resolve(process.cwd(), 'server/src/assets/audio_stream.mp3'),
-        path.resolve(__dirname, '../public/audio_sample.mp3'),
-        path.resolve(__dirname, '../server/src/assets/audio_stream.mp3'),
-      ]
-    : [
-        path.resolve(process.cwd(), 'public/sample.mp4'),
-        path.resolve(process.cwd(), 'server/src/assets/sample.mp4'),
-        path.resolve(process.cwd(), 'server/src/assets/video_stream.mp4'),
-        path.resolve(__dirname, '../public/sample.mp4'),
-        path.resolve(__dirname, '../server/src/assets/sample.mp4'),
-        path.resolve(__dirname, '../server/src/assets/video_stream.mp4'),
-      ];
-
-  for (const candidate of candidates) {
-    try {
-      if (fs.existsSync(candidate)) {
-        const buf = fs.readFileSync(candidate);
-        if (buf && buf.length > 500) {
-          return buf;
-        }
-      }
-    } catch {}
-  }
-
+export function getValidMediaBuffer(_isAudio = false): Buffer {
   return Buffer.alloc(0);
 }
 
@@ -545,21 +518,13 @@ export function getValidMp4Buffer(): Buffer {
 }
 
 export function createPlayableStream(isAudio: boolean | number = false): { stream: Readable; contentLength: number } {
-  const buffer = getValidMediaBuffer(typeof isAudio === 'boolean' ? isAudio : false);
-  let sent = false;
-
+  // Empty stream placeholder (never serve fake sample video)
   const stream = new Readable({
     read() {
-      if (sent) {
-        this.push(null);
-      } else {
-        sent = true;
-        this.push(buffer);
-      }
+      this.push(null);
     },
   });
-
-  return { stream, contentLength: buffer.length };
+  return { stream, contentLength: 0 };
 }
 
 function _legacyCreatePlayableStream(size = 5 * 1024 * 1024): { stream: Readable; contentLength: number } {

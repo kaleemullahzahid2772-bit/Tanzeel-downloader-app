@@ -1,4 +1,4 @@
-import { extractMediaMetadata, createPlayableStream, createRemoteStream, parseBody, sendJson } from './extractor';
+import { extractMediaMetadata, createRemoteStream, parseBody, sendJson } from './extractor';
 
 const BACKEND_URL = process.env.VITE_API_URL || process.env.BACKEND_API_URL || 'https://tanzeel-downloader-app-1.onrender.com';
 
@@ -47,10 +47,10 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    // Try live Render backend first with 6s timeout to prevent hanging
+    // 1. Try live Render backend first with 60s timeout for real downloads
     try {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 6000);
+      const timer = setTimeout(() => controller.abort(), 60000);
 
       const backendRes = await fetch(`${BACKEND_URL}/api/download`, {
         method: 'POST',
@@ -77,6 +77,7 @@ export default async function handler(req: any, res: any) {
       console.warn('[Download Proxy to Render failed]:', proxyError?.message);
     }
 
+    // 2. Direct extraction fallback (e.g. TikTok, direct media URL)
     const meta = await extractMediaMetadata(url);
     const safeTitle = (meta.title || 'video_download').replace(/[^a-zA-Z0-9_\-]/g, '_');
     const isAudio = format === 'mp3' || quality?.includes('audio') || quality?.includes('mp3');
@@ -100,13 +101,11 @@ export default async function handler(req: any, res: any) {
       }
     }
 
-    // Playable stream fallback
-    const { stream, contentLength } = createPlayableStream(isAudio);
-    res.statusCode = 200;
-    res.setHeader('Content-Type', isAudio ? 'audio/mpeg' : 'video/mp4');
-    res.setHeader('Content-Disposition', `attachment; filename="${encodeURIComponent(filename)}"`);
-    res.setHeader('Content-Length', contentLength.toString());
-    stream.pipe(res);
+    // 3. DO NOT return fake video - return real error so client knows
+    return sendJson(res, 502, {
+      success: false,
+      error: 'Unable to stream this media. Please ensure the backend server is running or try again shortly.',
+    });
   } catch (error: any) {
     console.error('[API Download Error]', error);
     if (!res.headersSent) {

@@ -1,6 +1,5 @@
 import { IPlatformAdapter, StreamMediaResult } from '../domain/interfaces/IPlatformAdapter';
 import { MediaMetadata } from '../domain/models/MediaMetadata';
-import { PlayableVideoService } from '../services/PlayableVideoService';
 import { realMediaExtractorService } from '../services/RealMediaExtractorService';
 import { ytDlpExtractorService } from '../services/YtDlpExtractorService';
 
@@ -30,18 +29,18 @@ export class InstagramAdapter implements IPlatformAdapter {
       platform: 'instagram',
       platformName: 'Instagram',
       title: realMeta.title || 'Instagram Reel',
-      author: realMeta.author || '@instagramuser',
-      thumbnailUrl: realMeta.thumbnailUrl || 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=600&auto=format&fit=crop&q=80',
-      durationSeconds: 90,
-      durationFormatted: '01:30',
+      author: realMeta.author || '@instagrammer',
+      thumbnailUrl: realMeta.thumbnailUrl || 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=600&auto=format&fit=crop&q=80',
+      durationSeconds: 30,
+      durationFormatted: '00:30',
       formats: [
         {
-          formatId: '1080p',
-          resolution: '1080p',
+          formatId: '720p',
+          resolution: '720p',
           container: 'mp4',
-          qualityLabel: '1080p HD Reel (MP4)',
-          estimatedSizeBytes: 3145728,
-          estimatedSizeFormatted: '3.0 MB',
+          qualityLabel: '720p HD (MP4)',
+          estimatedSizeBytes: 8388608,
+          estimatedSizeFormatted: '8.0 MB',
           isAudioOnly: false,
           url: realMeta.directMediaUrl,
         },
@@ -75,14 +74,6 @@ export class InstagramAdapter implements IPlatformAdapter {
       }
     }
 
-    // 3. Fallback
-    const { stream, contentLength, isExactLength } = PlayableVideoService.createPlayableStream(isAudio);
-    return {
-      stream,
-      contentLength,
-      contentType: isAudio ? 'audio/mpeg' : 'video/mp4',
-      filename,
-      isExactLength,
-    };
+    throw new Error('Unable to download Instagram video. Please make sure the account is public.');
   }
 }

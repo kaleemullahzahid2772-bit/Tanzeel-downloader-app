@@ -1,10 +1,10 @@
-import { execFile, spawn } from 'child_process';
+import { execFile } from 'child_process';
 import path from 'path';
 import fs from 'fs';
-import { PassThrough } from 'stream';
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
 import { MediaMetadata } from '../domain/models/MediaMetadata';
 import { StreamMediaResult } from '../domain/interfaces/IPlatformAdapter';
+import { tempFileManager } from './TempFileManager';
 
 export class YtDlpExtractorService {
   private ytDlpPath: string;
@@ -41,7 +41,6 @@ export class YtDlpExtractorService {
     }
 
     const lowerUrl = url.toLowerCase();
-    const isYouTube = lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be');
     let referer = 'https://www.google.com/';
     if (lowerUrl.includes('tiktok')) referer = 'https://www.tiktok.com/';
     if (lowerUrl.includes('facebook') || lowerUrl.includes('fb.watch') || lowerUrl.includes('fb.com')) referer = 'https://www.facebook.com/';
@@ -54,19 +53,14 @@ export class YtDlpExtractorService {
       '--no-update',
       '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       '--referer', referer,
+      url,
     ];
-
-    if (isYouTube) {
-      args.push('--extractor-args', 'youtube:player_client=android');
-    }
-
-    args.push(url);
 
     return new Promise((resolve) => {
       execFile(
         this.ytDlpPath,
         args,
-        { timeout: 15000, maxBuffer: 10 * 1024 * 1024 },
+        { timeout: 25000, maxBuffer: 10 * 1024 * 1024 },
         (err, stdout) => {
           if (err || !stdout) {
             return resolve(null);
@@ -98,10 +92,28 @@ export class YtDlpExtractorService {
                   formatId: '1080p',
                   resolution: '1080p',
                   container: 'mp4',
-                  qualityLabel: '1080p Full HD Original (MP4)',
-                  estimatedSizeBytes: Math.round(data.filesize || data.filesize_approx || 25 * 1024 * 1024),
-                  estimatedSizeFormatted: `${((data.filesize || 25 * 1024 * 1024) / (1024 * 1024)).toFixed(1)} MB`,
+                  qualityLabel: '1080p Full HD (MP4)',
+                  estimatedSizeBytes: Math.round(data.filesize || data.filesize_approx || 35 * 1024 * 1024),
+                  estimatedSizeFormatted: `${((data.filesize || 35 * 1024 * 1024) / (1024 * 1024)).toFixed(1)} MB`,
                   isAudioOnly: false,
+                },
+                {
+                  formatId: '720p',
+                  resolution: '720p',
+                  container: 'mp4',
+                  qualityLabel: '720p HD (MP4)',
+                  estimatedSizeBytes: Math.round((data.filesize || 35 * 1024 * 1024) * 0.6),
+                  estimatedSizeFormatted: `${(((data.filesize || 35 * 1024 * 1024) * 0.6) / (1024 * 1024)).toFixed(1)} MB`,
+                  isAudioOnly: false,
+                },
+                {
+                  formatId: 'audio',
+                  resolution: 'Audio',
+                  container: 'mp3',
+                  qualityLabel: 'MP3 Audio Track',
+                  estimatedSizeBytes: 5 * 1024 * 1024,
+                  estimatedSizeFormatted: '5.0 MB',
+                  isAudioOnly: true,
                 },
               ],
               analyzedAt: new Date().toISOString(),
@@ -127,7 +139,6 @@ export class YtDlpExtractorService {
     const filename = `${safeTitle}.${isAudio ? 'mp3' : 'mp4'}`;
 
     const lowerUrl = url.toLowerCase();
-    const isYouTube = lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be');
     const isTikTok = lowerUrl.includes('tiktok');
     const isFacebook = lowerUrl.includes('facebook') || lowerUrl.includes('fb.watch') || lowerUrl.includes('fb.com');
 
@@ -137,40 +148,33 @@ export class YtDlpExtractorService {
 
     const ffmpegBinary = ffmpegInstaller?.path && fs.existsSync(ffmpegInstaller.path) ? ffmpegInstaller.path : null;
 
-    // Format selection priority
-    let formatString = 'bv*[vcodec^=avc1]+ba[acodec^=mp4a]/18/b[ext=mp4]/bestvideo+bestaudio/best';
+    // Quality format selection
+    let formatString = 'bv*[height<=720][ext=mp4]+ba[ext=m4a]/b[height<=720][ext=mp4]/bv*[height<=720]+ba/best[height<=720]/best';
     if (isAudio) {
-      formatString = isYouTube ? 'ba/18/b' : 'ba/b';
-    } else if (isYouTube) {
-      // YouTube streams format 18 (pre-muxed H.264/AAC MP4) reliably without 403 or SABR failures
-      formatString = '18/b[ext=mp4]/best';
+      formatString = 'ba/b';
     } else if (quality === '1080p') {
-      formatString = 'bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=1080]+bestaudio/best[height<=1080]/best';
+      formatString = 'bv*[height<=1080][ext=mp4]+ba[ext=m4a]/b[height<=1080][ext=mp4]/bv*[height<=1080]+ba/best[height<=1080]/best';
     } else if (quality === '720p') {
-      formatString = 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=720]+bestaudio/best[height<=720]/best';
+      formatString = 'bv*[height<=720][ext=mp4]+ba[ext=m4a]/b[height<=720][ext=mp4]/bv*[height<=720]+ba/best[height<=720]/best';
     } else if (quality === '480p') {
-      formatString = 'bestvideo[height<=480][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=480]+bestaudio/best[height<=480]/best';
+      formatString = 'bv*[height<=480][ext=mp4]+ba[ext=m4a]/b[height<=480][ext=mp4]/bv*[height<=480]+ba/best[height<=480]/best';
     } else if (quality === '360p') {
-      formatString = 'bestvideo[height<=360][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<=360]+bestaudio/best[height<=360]/best';
-    } else if (isTikTok) {
-      formatString = 'bv*[vcodec*=h264]+ba/b[vcodec*=h264]/[format_id^=h264]/bv*[vcodec^=avc1]+ba/b[vcodec^=avc1]/best';
+      formatString = 'bv*[height<=360][ext=mp4]+ba[ext=m4a]/b[height<=360][ext=mp4]/bv*[height<=360]+ba/best[height<=360]/best';
     }
 
+    const tempFilePath = tempFileManager.createTempFilePath('dl_', isAudio ? '.mp3' : '.mp4');
+    const outputTemplate = isAudio ? tempFilePath.replace(/\.mp3$/, '.%(ext)s') : tempFilePath;
+
     const args: string[] = [
-      '-o', '-',
-      '-f', formatString,
-      '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      '--referer', referer,
       '--no-playlist',
       '--no-check-certificate',
       '--no-update',
-      '--quiet',
       '--no-warnings',
+      '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      '--referer', referer,
+      '-f', formatString,
+      '-o', outputTemplate,
     ];
-
-    if (isYouTube) {
-      args.push('--extractor-args', 'youtube:player_client=android');
-    }
 
     if (isAudio) {
       args.push('-x', '--audio-format', 'mp3');
@@ -183,55 +187,59 @@ export class YtDlpExtractorService {
     args.push(url);
 
     return new Promise<StreamMediaResult | null>((resolve) => {
-      try {
-        const ytDlpProc = spawn(this.ytDlpPath, args);
-        let resolved = false;
-
-        const timeoutTimer = setTimeout(() => {
-          if (!resolved) {
-            resolved = true;
-            try { ytDlpProc.kill(); } catch {}
-            resolve(null);
+      execFile(
+        this.ytDlpPath,
+        args,
+        { timeout: 120000 },
+        (err) => {
+          if (err) {
+            console.error('[ytDlp Download Error]:', err.message);
           }
-        }, 15000);
 
-        ytDlpProc.stdout.once('data', (firstChunk: Buffer) => {
-          if (!resolved) {
-            resolved = true;
-            clearTimeout(timeoutTimer);
+          // Locate final downloaded file
+          let actualFile = tempFilePath;
+          if (isAudio && !fs.existsSync(actualFile)) {
+            const candidateMp3 = tempFilePath.replace(/\.[^.]+$/, '.mp3');
+            if (fs.existsSync(candidateMp3)) {
+              actualFile = candidateMp3;
+            }
+          }
 
-            const passThrough = new PassThrough();
-            passThrough.write(firstChunk);
-            ytDlpProc.stdout.pipe(passThrough);
+          if (!fs.existsSync(actualFile)) {
+            console.error('[ytDlp] Downloaded file does not exist:', actualFile);
+            tempFileManager.safeDelete(tempFilePath);
+            return resolve(null);
+          }
+
+          try {
+            const stats = fs.statSync(actualFile);
+            if (stats.size < 1000) {
+              console.error('[ytDlp] Downloaded file too small:', stats.size);
+              tempFileManager.safeDelete(actualFile);
+              return resolve(null);
+            }
+
+            const stream = fs.createReadStream(actualFile);
+            const cleanup = () => {
+              tempFileManager.safeDelete(actualFile);
+            };
+            stream.once('close', cleanup);
+            stream.once('error', cleanup);
 
             resolve({
-              stream: passThrough,
-              contentLength: isAudio ? 5 * 1024 * 1024 : 25 * 1024 * 1024,
+              stream,
+              contentLength: stats.size,
               contentType: isAudio ? 'audio/mpeg' : 'video/mp4',
               filename,
+              isExactLength: true,
             });
-          }
-        });
-
-        ytDlpProc.once('close', (code: number | null) => {
-          if (!resolved) {
-            resolved = true;
-            clearTimeout(timeoutTimer);
+          } catch (e) {
+            console.error('[ytDlp ReadStream Error]:', e);
+            tempFileManager.safeDelete(actualFile);
             resolve(null);
           }
-        });
-
-        ytDlpProc.once('error', (err: any) => {
-          console.error('[ytDlpError]', err);
-          if (!resolved) {
-            resolved = true;
-            clearTimeout(timeoutTimer);
-            resolve(null);
-          }
-        });
-      } catch {
-        resolve(null);
-      }
+        }
+      );
     });
   }
 }

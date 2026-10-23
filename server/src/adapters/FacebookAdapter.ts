@@ -1,6 +1,5 @@
 import { IPlatformAdapter, StreamMediaResult } from '../domain/interfaces/IPlatformAdapter';
 import { MediaMetadata } from '../domain/models/MediaMetadata';
-import { PlayableVideoService } from '../services/PlayableVideoService';
 import { realMediaExtractorService } from '../services/RealMediaExtractorService';
 import { ytDlpExtractorService } from '../services/YtDlpExtractorService';
 
@@ -75,14 +74,6 @@ export class FacebookAdapter implements IPlatformAdapter {
       }
     }
 
-    // 3. Fallback
-    const { stream, contentLength, isExactLength } = PlayableVideoService.createPlayableStream(isAudio);
-    return {
-      stream,
-      contentLength,
-      contentType: isAudio ? 'audio/mpeg' : 'video/mp4',
-      filename,
-      isExactLength,
-    };
+    throw new Error('Unable to download Facebook video. Please make sure the video or post is public.');
   }
 }

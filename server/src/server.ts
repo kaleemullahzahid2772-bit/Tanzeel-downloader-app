@@ -12,7 +12,12 @@ import { downloadRouter } from './routes/download.router';
 export const app = express();
 
 // 1. Security & Parsing Middleware
-app.use(helmet({ crossOriginResourcePolicy: false }));
+app.use(
+  helmet({
+    crossOriginResourcePolicy: false,
+    contentSecurityPolicy: false,
+  })
+);
 app.use(
   cors({
     origin: (origin, callback) => {
@@ -47,8 +52,23 @@ app.use('/api', healthRouter);
 app.use('/api', analyzeRouter);
 app.use('/api', downloadRouter);
 
+// Chrome DevTools & well-known discovery handler
+app.all('/.well-known/*', (_req, res) => {
+  res.status(204).end();
+});
+
+// Root status ping
+app.get('/', (_req, res) => {
+  res.json({ name: 'omnidownloader-backend', status: 'ok' });
+});
+
 // 4. Error Handling Middleware
 app.use(errorHandler);
+
+// 404 Fallback for unmatched routes
+app.use((_req, res) => {
+  res.status(404).json({ error: 'Endpoint not found' });
+});
 
 process.on('uncaughtException', (err) => {
   console.error('[UncaughtException]', err);

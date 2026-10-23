@@ -1,6 +1,5 @@
 import { IPlatformAdapter, StreamMediaResult } from '../domain/interfaces/IPlatformAdapter';
 import { MediaMetadata } from '../domain/models/MediaMetadata';
-import { PlayableVideoService } from '../services/PlayableVideoService';
 import { realMediaExtractorService } from '../services/RealMediaExtractorService';
 import { ytDlpExtractorService } from '../services/YtDlpExtractorService';
 
@@ -36,13 +35,31 @@ export class YouTubeAdapter implements IPlatformAdapter {
       durationFormatted: '03:00',
       formats: [
         {
+          formatId: '1080p',
+          resolution: '1080p',
+          container: 'mp4',
+          qualityLabel: '1080p Full HD (MP4)',
+          estimatedSizeBytes: 35 * 1024 * 1024,
+          estimatedSizeFormatted: '35.0 MB',
+          isAudioOnly: false,
+        },
+        {
           formatId: '720p',
           resolution: '720p',
           container: 'mp4',
           qualityLabel: '720p HD (MP4)',
-          estimatedSizeBytes: 5242880,
-          estimatedSizeFormatted: '5.0 MB',
+          estimatedSizeBytes: 18 * 1024 * 1024,
+          estimatedSizeFormatted: '18.0 MB',
           isAudioOnly: false,
+        },
+        {
+          formatId: 'audio',
+          resolution: 'Audio',
+          container: 'mp3',
+          qualityLabel: 'MP3 Audio (Original Sound)',
+          estimatedSizeBytes: 5 * 1024 * 1024,
+          estimatedSizeFormatted: '5.0 MB',
+          isAudioOnly: true,
         },
       ],
       analyzedAt: new Date().toISOString(),
@@ -51,8 +68,6 @@ export class YouTubeAdapter implements IPlatformAdapter {
 
   public async createMediaStream(url: string, formatId?: string): Promise<StreamMediaResult> {
     const meta = await this.extractMetadata(url);
-    const isAudio = formatId?.toLowerCase() === 'mp3' || formatId?.toLowerCase() === 'audio';
-    const filename = `${meta.title.replace(/[^a-zA-Z0-9_]/g, '_')}.${isAudio ? 'mp3' : 'mp4'}`;
 
     // 1. Try real yt-dlp binary stream output with exact quality requested
     const ytDlpStream = await ytDlpExtractorService.createMediaStream(url, meta.title, formatId);
@@ -60,14 +75,6 @@ export class YouTubeAdapter implements IPlatformAdapter {
       return ytDlpStream;
     }
 
-    // 2. Fallback to PlayableVideoService stream
-    const { stream, contentLength, isExactLength } = PlayableVideoService.createPlayableStream(isAudio);
-    return {
-      stream,
-      contentLength,
-      contentType: isAudio ? 'audio/mpeg' : 'video/mp4',
-      filename,
-      isExactLength,
-    };
+    throw new Error('Unable to download YouTube video. Please verify the link is public.');
   }
 }
