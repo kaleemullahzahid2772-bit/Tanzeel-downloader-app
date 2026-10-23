@@ -8,6 +8,10 @@ downloadRouter.all('/download', async (req: Request, res: Response, next: NextFu
   try {
     const url = (req.query.url as string) || req.body?.url;
     const quality = (req.query.quality as string) || req.body?.quality;
+    const format = (req.query.format as string) || req.body?.format;
+    const title = (req.query.title as string) || req.body?.title;
+    const isAudio = format === 'mp3' || quality === 'mp3' || quality?.includes('audio');
+    const chosenQuality = isAudio ? 'mp3' : quality;
 
     if (!url || typeof url !== 'string' || !url.trim()) {
       return res.status(400).json({
@@ -16,7 +20,7 @@ downloadRouter.all('/download', async (req: Request, res: Response, next: NextFu
       });
     }
 
-    const mediaResult = await mediaExtractorService.downloadMedia(url, quality);
+    const mediaResult = await mediaExtractorService.downloadMedia(url, chosenQuality, title);
     const safeFilename = tempFileManager.sanitizeFilename(mediaResult.filename);
 
     const rangeHeader = req.headers.range;

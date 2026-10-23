@@ -51,19 +51,20 @@ export class GenericWebAdapter implements IPlatformAdapter {
     };
   }
 
-  public async createMediaStream(url: string, formatId?: string): Promise<StreamMediaResult> {
-    const meta = await this.extractMetadata(url);
-    const isAudio = formatId?.toLowerCase() === 'mp3' || formatId?.toLowerCase() === 'audio';
-    const filename = `${meta.title.replace(/[^a-zA-Z0-9_]/g, '_')}.${isAudio ? 'mp3' : 'mp4'}`;
-
-    // 1. Try real yt-dlp binary stream output
-    const ytDlpStream = await ytDlpExtractorService.createMediaStream(url, meta.title, formatId);
+  public async createMediaStream(url: string, formatId?: string, title?: string): Promise<StreamMediaResult> {
+    // 1. Try real yt-dlp binary stream output directly (fast)
+    const ytDlpStream = await ytDlpExtractorService.createMediaStream(url, title, formatId);
     if (ytDlpStream && ytDlpStream.stream) {
       return ytDlpStream;
     }
 
     // 2. Direct HTML extracted media URL stream
-    const directUrl = meta.formats[0]?.url || url;
+    const meta = await this.extractMetadata(url).catch(() => null);
+    const isAudio = formatId?.toLowerCase() === 'mp3' || formatId?.toLowerCase() === 'audio';
+    const safeTitle = (title || meta?.title || 'web_video').replace(/[^a-zA-Z0-9_]/g, '_');
+    const filename = `${safeTitle}.${isAudio ? 'mp3' : 'mp4'}`;
+
+    const directUrl = meta?.formats[0]?.url || url;
     if (directUrl && (directUrl.endsWith('.mp4') || directUrl.endsWith('.webm') || directUrl.includes('googlevideo.com') || directUrl.includes('fbcdn.net') || directUrl.includes('cdninstagram.com'))) {
       const realStream = await realMediaExtractorService.createRealStreamFromUrl(directUrl);
       if (realStream) {
@@ -76,6 +77,9 @@ export class GenericWebAdapter implements IPlatformAdapter {
       }
     }
 
-    throw new Error('Unable to extract playable video stream from this URL.');
+    const err = new Error('Unable to extract playable video stream from this URL.');
+    (err as any).statusCode = 400;
+    (err as any).isUserFacing = true;
+    throw err;
   }
 }

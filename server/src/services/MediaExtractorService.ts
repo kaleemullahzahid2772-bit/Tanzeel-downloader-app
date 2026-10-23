@@ -45,9 +45,9 @@ export class MediaExtractorService implements IMediaExtractor {
     return adapter.extractMetadata(url);
   }
 
-  public async downloadMedia(url: string, quality?: string): Promise<StreamMediaResult> {
+  public async downloadMedia(url: string, quality?: string, title?: string): Promise<StreamMediaResult> {
     const adapter = this.validateAndFindAdapter(url);
-    return adapter.createMediaStream(url, quality);
+    return adapter.createMediaStream(url, quality, title);
   }
 }
 

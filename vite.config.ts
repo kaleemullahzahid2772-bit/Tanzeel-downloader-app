@@ -7,7 +7,19 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     watch: {
-      ignored: ['**/public/**', '**/server/**'],
+      ignored: [
+        '**/public/**',
+        '**/server/**',
+        '**/*.mp4',
+        '**/*.mp3',
+        '**/*.m4a',
+        '**/*.webm',
+        '**/*.part',
+        '**/*.tmp',
+        '**/temp/**',
+        '**/downloads/**',
+        '**/dist/**',
+      ],
     },
     proxy: {
       '/api': {

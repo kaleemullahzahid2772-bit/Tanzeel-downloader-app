@@ -13,5 +13,5 @@ export interface IPlatformAdapter {
   platformId: 'youtube' | 'tiktok' | 'facebook' | 'instagram' | 'unknown';
   canHandle(url: string): boolean;
   extractMetadata(url: string): Promise<MediaMetadata>;
-  createMediaStream(url: string, formatId?: string): Promise<StreamMediaResult>;
+  createMediaStream(url: string, formatId?: string, title?: string): Promise<StreamMediaResult>;
 }

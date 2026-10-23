@@ -49,31 +49,37 @@ export class InstagramAdapter implements IPlatformAdapter {
     };
   }
 
-  public async createMediaStream(url: string, formatId?: string): Promise<StreamMediaResult> {
-    const meta = await this.extractMetadata(url);
-    const isAudio = formatId?.toLowerCase() === 'mp3' || formatId?.toLowerCase() === 'audio';
-    const filename = `${meta.title.replace(/[^a-zA-Z0-9_]/g, '_')}.${isAudio ? 'mp3' : 'mp4'}`;
-
-    // 1. Try real yt-dlp binary stream output
-    const ytDlpStream = await ytDlpExtractorService.createMediaStream(url, meta.title, formatId);
+  public async createMediaStream(url: string, formatId?: string, title?: string): Promise<StreamMediaResult> {
+    // 1. Try real yt-dlp binary stream output directly (fast)
+    const ytDlpStream = await ytDlpExtractorService.createMediaStream(url, title, formatId);
     if (ytDlpStream && ytDlpStream.stream) {
       return ytDlpStream;
     }
 
     // 2. Direct HTML extracted media URL stream
-    const directUrl = meta.formats[0]?.url;
-    if (directUrl) {
-      const realStream = await realMediaExtractorService.createRealStreamFromUrl(directUrl);
-      if (realStream) {
-        return {
-          stream: realStream.stream,
-          contentLength: realStream.contentLength,
-          contentType: realStream.contentType,
-          filename,
-        };
+    const meta = await this.extractMetadata(url).catch(() => null);
+    if (meta) {
+      const isAudio = formatId?.toLowerCase() === 'mp3' || formatId?.toLowerCase() === 'audio';
+      const safeTitle = (title || meta.title || 'instagram_video').replace(/[^a-zA-Z0-9_]/g, '_');
+      const filename = `${safeTitle}.${isAudio ? 'mp3' : 'mp4'}`;
+
+      const directUrl = meta.formats[0]?.url;
+      if (directUrl) {
+        const realStream = await realMediaExtractorService.createRealStreamFromUrl(directUrl);
+        if (realStream) {
+          return {
+            stream: realStream.stream,
+            contentLength: realStream.contentLength,
+            contentType: realStream.contentType,
+            filename,
+          };
+        }
       }
     }
 
-    throw new Error('Unable to download Instagram video. Please make sure the account is public.');
+    const err = new Error('Unable to download Instagram video. Please make sure the account is public.');
+    (err as any).statusCode = 400;
+    (err as any).isUserFacing = true;
+    throw err;
   }
 }

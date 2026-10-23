@@ -1,6 +1,7 @@
 import { extractMediaMetadata, parseBody, sendJson } from './extractor';
 
-const BACKEND_URL = process.env.VITE_API_URL || process.env.BACKEND_API_URL || 'https://tanzeel-downloader-app-1.onrender.com';
+const rawBackendUrl = process.env.VITE_API_URL || process.env.BACKEND_API_URL || 'https://tanzeel-downloader-app-1.onrender.com';
+const BACKEND_URL = rawBackendUrl.replace(/\/+$/, '');
 
 export default async function handler(req: any, res: any) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -27,10 +28,10 @@ export default async function handler(req: any, res: any) {
       });
     }
 
-    // Forward to live Render backend with 15s timeout for cold start resilience
+    // Forward to live Render backend with 30s timeout for cold start resilience
     try {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 15000);
+      const timer = setTimeout(() => controller.abort(), 30000);
 
       const renderRes = await fetch(`${BACKEND_URL}/api/analyze`, {
         method: 'POST',

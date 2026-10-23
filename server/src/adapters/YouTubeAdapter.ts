@@ -66,15 +66,25 @@ export class YouTubeAdapter implements IPlatformAdapter {
     };
   }
 
-  public async createMediaStream(url: string, formatId?: string): Promise<StreamMediaResult> {
-    const meta = await this.extractMetadata(url);
-
-    // 1. Try real yt-dlp binary stream output with exact quality requested
-    const ytDlpStream = await ytDlpExtractorService.createMediaStream(url, meta.title, formatId);
+  public async createMediaStream(url: string, formatId?: string, title?: string): Promise<StreamMediaResult> {
+    // 1. Directly stream using real yt-dlp binary (fast - skips redundant metadata extraction)
+    const ytDlpStream = await ytDlpExtractorService.createMediaStream(url, title, formatId);
     if (ytDlpStream && ytDlpStream.stream) {
       return ytDlpStream;
     }
 
-    throw new Error('Unable to download YouTube video. Please verify the link is public.');
+    // 2. Retry after metadata extraction if direct stream failed
+    const meta = await this.extractMetadata(url).catch(() => null);
+    if (meta) {
+      const retryStream = await ytDlpExtractorService.createMediaStream(url, meta.title, formatId);
+      if (retryStream && retryStream.stream) {
+        return retryStream;
+      }
+    }
+
+    const err = new Error('Unable to download YouTube video. Please verify the link is public.');
+    (err as any).statusCode = 400;
+    (err as any).isUserFacing = true;
+    throw err;
   }
 }

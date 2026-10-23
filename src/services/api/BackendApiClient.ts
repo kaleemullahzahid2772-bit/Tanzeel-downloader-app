@@ -23,7 +23,7 @@ export class BackendApiClient implements IBackendApiClient {
 
   public async analyzeUrl(url: string): Promise<MediaMetadata> {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 15000);
+    const timer = setTimeout(() => controller.abort(), 45000);
 
     let res: Response;
     try {
@@ -109,7 +109,7 @@ export class BackendApiClient implements IBackendApiClient {
     const format = isAudio ? 'mp3' : 'mp4';
 
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 35000);
+    const timer = setTimeout(() => controller.abort(), 180000);
 
     let res: Response;
     try {
