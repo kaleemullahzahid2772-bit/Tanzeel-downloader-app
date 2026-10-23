@@ -220,22 +220,30 @@ export async function extractMediaMetadata(rawUrl: string): Promise<ExtractedMed
     };
   }
 
-  // 1. TikTok: Real No-Watermark Extraction via TikWM API
+  // 1. TikTok: Real No-Watermark Extraction via TikWM API (H.264 MP4, universal playback)
   if (platform === 'tiktok') {
     try {
-      const tikwmRes = await axios.post(
-        'https://www.tikwm.com/api/',
-        new URLSearchParams({ url, count: '12', cursor: '0', web: '1', hd: '1' }).toString(),
+      const tikwmRes = await axios.get(
+        `https://www.tikwm.com/api/?url=${encodeURIComponent(url)}&hd=1`,
         {
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-          timeout: 4500,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'Accept': 'application/json',
+          },
+          timeout: 5000,
         }
       ).catch(() => null);
 
       if (tikwmRes?.data && tikwmRes.data.code === 0 && tikwmRes.data.data) {
         const d = tikwmRes.data.data;
-        const directVideoUrl = d.play || d.hdplay || d.wmplay;
-        const directAudioUrl = d.music;
+        let directVideoUrl = d.play || d.hdplay || d.wmplay;
+        if (directVideoUrl && directVideoUrl.startsWith('/')) {
+          directVideoUrl = `https://www.tikwm.com${directVideoUrl}`;
+        }
+        let directAudioUrl = d.music;
+        if (directAudioUrl && directAudioUrl.startsWith('/')) {
+          directAudioUrl = `https://www.tikwm.com${directAudioUrl}`;
+        }
         const videoSize = d.size || d.hd_size || 12 * 1024 * 1024;
         const audioSize = 3 * 1024 * 1024;
 
@@ -556,6 +564,8 @@ function _legacyCreatePlayableStream(size = 5 * 1024 * 1024): { stream: Readable
 export function createRemoteStream(remoteUrl: string): Promise<{ stream: Readable; contentLength: number; contentType: string } | null> {
   return new Promise((resolve) => {
     try {
+      const isTikTok = remoteUrl.includes('tiktok') || remoteUrl.includes('tikwm');
+      const referer = isTikTok ? 'https://www.tiktok.com/' : remoteUrl;
       const client = remoteUrl.startsWith('https') ? https : http;
       const req = client.get(
         remoteUrl,
@@ -563,7 +573,7 @@ export function createRemoteStream(remoteUrl: string): Promise<{ stream: Readabl
           headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
             'Accept': '*/*',
-            'Referer': remoteUrl,
+            'Referer': referer,
           },
           rejectUnauthorized: false,
         } as any,
@@ -576,7 +586,7 @@ export function createRemoteStream(remoteUrl: string): Promise<{ stream: Readabl
               contentLength: len || 0,
               contentType: type,
             });
-          } else if (res.statusCode === 301 || res.statusCode === 302 || res.statusCode === 307) {
+          } else if (res.statusCode && [301, 302, 303, 307, 308].includes(res.statusCode)) {
             const redirectUrl = res.headers.location;
             if (redirectUrl) {
               createRemoteStream(redirectUrl).then(resolve);

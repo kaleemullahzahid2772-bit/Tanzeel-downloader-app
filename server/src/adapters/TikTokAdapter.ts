@@ -44,34 +44,59 @@ export class TikTokAdapter implements IPlatformAdapter {
           isAudioOnly: false,
           url: realMeta.directMediaUrl,
         },
+        {
+          formatId: '720p',
+          resolution: '720p',
+          container: 'mp4',
+          qualityLabel: '720p Standard (MP4)',
+          estimatedSizeBytes: 10 * 1024 * 1024,
+          estimatedSizeFormatted: '10.0 MB',
+          isAudioOnly: false,
+          url: realMeta.directMediaUrl,
+        },
+        {
+          formatId: 'audio',
+          resolution: 'Audio',
+          container: 'mp3',
+          qualityLabel: 'Original Audio (MP3)',
+          estimatedSizeBytes: 3 * 1024 * 1024,
+          estimatedSizeFormatted: '3.0 MB',
+          isAudioOnly: true,
+          url: (realMeta as any).musicUrl || realMeta.directMediaUrl,
+        },
       ],
       analyzedAt: new Date().toISOString(),
     };
   }
 
   public async createMediaStream(url: string, formatId?: string, title?: string): Promise<StreamMediaResult> {
-    // 1. Try real yt-dlp binary stream output directly (fast)
+    // 1. Try real yt-dlp binary stream output directly (fast, H.264 prioritized)
     const ytDlpStream = await ytDlpExtractorService.createMediaStream(url, title, formatId);
     if (ytDlpStream && ytDlpStream.stream) {
       return ytDlpStream;
     }
 
-    // 2. Direct HTML / TikWM extracted media URL stream
+    // 2. Direct TikWM / CDN extracted media URL stream
     const meta = await this.extractMetadata(url).catch(() => null);
     if (meta) {
       const isAudio = formatId?.toLowerCase() === 'mp3' || formatId?.toLowerCase() === 'audio';
       const safeTitle = (title || meta.title || 'tiktok_video').replace(/[^a-zA-Z0-9_]/g, '_');
       const filename = `${safeTitle}.${isAudio ? 'mp3' : 'mp4'}`;
 
-      const directUrl = meta.formats[0]?.url;
+      const selectedFormat = isAudio
+        ? (meta.formats.find((f) => f.isAudioOnly) || meta.formats[0])
+        : (meta.formats.find((f) => f.formatId === formatId) || meta.formats[0]);
+
+      const directUrl = selectedFormat?.url || meta.formats[0]?.url;
       if (directUrl) {
         const realStream = await realMediaExtractorService.createRealStreamFromUrl(directUrl);
         if (realStream) {
           return {
             stream: realStream.stream,
             contentLength: realStream.contentLength,
-            contentType: realStream.contentType,
+            contentType: isAudio ? 'audio/mpeg' : (realStream.contentType || 'video/mp4'),
             filename,
+            isExactLength: true,
           };
         }
       }

@@ -41,8 +41,9 @@ export class YtDlpExtractorService {
     }
 
     const lowerUrl = url.toLowerCase();
+    const isTikTok = lowerUrl.includes('tiktok');
     let referer = 'https://www.google.com/';
-    if (lowerUrl.includes('tiktok')) referer = 'https://www.tiktok.com/';
+    if (isTikTok) referer = 'https://www.tiktok.com/';
     if (lowerUrl.includes('facebook') || lowerUrl.includes('fb.watch') || lowerUrl.includes('fb.com')) referer = 'https://www.facebook.com/';
 
     const args = [
@@ -55,6 +56,10 @@ export class YtDlpExtractorService {
       '--referer', referer,
       url,
     ];
+
+    if (isTikTok) {
+      args.splice(5, 0, '--format-sort', 'vcodec:h264');
+    }
 
     return new Promise((resolve) => {
       execFile(
@@ -152,6 +157,19 @@ export class YtDlpExtractorService {
     let formatString = 'bv*[height<=720][ext=mp4]+ba[ext=m4a]/b[height<=720][ext=mp4]/bv*[height<=720]+ba/best[height<=720]/best';
     if (isAudio) {
       formatString = 'ba/b';
+    } else if (isTikTok) {
+      // Prioritize H.264 (AVC) codec for TikTok so that all media players (Windows, Android, VLC) can play the video
+      if (quality === '1080p') {
+        formatString = 'bv*[vcodec^=avc][height<=1080]+ba/b[vcodec^=avc][height<=1080]/bv*[vcodec^=h264]+ba/b[vcodec^=h264]/best[vcodec^=h264]/bv*[height<=1080][ext=mp4]+ba[ext=m4a]/b[height<=1080][ext=mp4]/best';
+      } else if (quality === '720p') {
+        formatString = 'bv*[vcodec^=avc][height<=720]+ba/b[vcodec^=avc][height<=720]/bv*[vcodec^=h264]+ba/b[vcodec^=h264]/best[vcodec^=h264]/bv*[height<=720][ext=mp4]+ba[ext=m4a]/b[height<=720][ext=mp4]/best';
+      } else if (quality === '480p') {
+        formatString = 'bv*[vcodec^=avc][height<=480]+ba/b[vcodec^=avc][height<=480]/bv*[vcodec^=h264]+ba/b[vcodec^=h264]/best[vcodec^=h264]/bv*[height<=480][ext=mp4]+ba/best';
+      } else if (quality === '360p') {
+        formatString = 'bv*[vcodec^=avc][height<=360]+ba/b[vcodec^=avc][height<=360]/bv*[vcodec^=h264]+ba/b[vcodec^=h264]/best[vcodec^=h264]/bv*[height<=360][ext=mp4]+ba/best';
+      } else {
+        formatString = 'bv*[vcodec^=avc]+ba/b[vcodec^=avc]/bv*[vcodec^=h264]+ba/b[vcodec^=h264]/best[vcodec^=h264]/best[ext=mp4]/best';
+      }
     } else if (quality === '1080p') {
       formatString = 'bv*[height<=1080][ext=mp4]+ba[ext=m4a]/b[height<=1080][ext=mp4]/bv*[height<=1080]+ba/best[height<=1080]/best';
     } else if (quality === '720p') {
@@ -176,6 +194,10 @@ export class YtDlpExtractorService {
       '-o', outputTemplate,
     ];
 
+    if (isTikTok) {
+      args.push('--format-sort', 'vcodec:h264');
+    }
+
     if (isAudio) {
       args.push('-x', '--audio-format', 'mp3');
     }
@@ -191,7 +213,7 @@ export class YtDlpExtractorService {
         this.ytDlpPath,
         args,
         { timeout: 120000 },
-        (err) => {
+        async (err) => {
           if (err) {
             console.error('[ytDlp Download Error]:', err.message);
           }
@@ -209,6 +231,38 @@ export class YtDlpExtractorService {
             console.error('[ytDlp] Downloaded file does not exist:', actualFile);
             tempFileManager.safeDelete(tempFilePath);
             return resolve(null);
+          }
+
+          // Ensure TikTok video is universal H.264 if HEVC / bytevc1 was returned
+          if (isTikTok && !isAudio && ffmpegBinary && fs.existsSync(actualFile)) {
+            try {
+              const needsH264 = await new Promise<boolean>((resProbe) => {
+                execFile(ffmpegBinary, ['-i', actualFile], (_, __, stderrProbe) => {
+                  const out = stderrProbe || '';
+                  resProbe(out.includes('Video: hevc') || out.includes('hvc1') || out.includes('bytevc1'));
+                });
+              });
+
+              if (needsH264) {
+                const convertedFile = tempFileManager.createTempFilePath('h264_', '.mp4');
+                await new Promise<void>((resTranscode) => {
+                  execFile(
+                    ffmpegBinary,
+                    ['-y', '-i', actualFile, '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-c:a', 'aac', '-b:a', '128k', '-movflags', '+faststart', convertedFile],
+                    { timeout: 60000 },
+                    (tErr) => {
+                      if (!tErr && fs.existsSync(convertedFile)) {
+                        tempFileManager.safeDelete(actualFile);
+                        actualFile = convertedFile;
+                      }
+                      resTranscode();
+                    }
+                  );
+                });
+              }
+            } catch (probeErr) {
+              console.warn('[ytDlp] TikTok codec check warning:', probeErr);
+            }
           }
 
           try {

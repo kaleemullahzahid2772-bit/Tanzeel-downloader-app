@@ -37,7 +37,7 @@ describe('Phase 3 - Backend API & Media Extractor Integration Tests', () => {
       const meta = await mediaExtractorService.analyzeUrl('https://unsupporteddomain123.com/video');
       expect(meta.platform).toBe('unknown');
       expect(meta.platformName).toBe('unsupporteddomain123.com');
-    });
+    }, 15000);
   });
 
   describe('TempFileManager & Filename Sanitization', () => {

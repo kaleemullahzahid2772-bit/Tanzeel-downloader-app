@@ -64,8 +64,41 @@ export class RealMediaExtractorService {
       };
     }
 
-    // 2. TikTok Extraction
-    if (platform === 'tiktok' || trimmed.includes('tiktok.com')) {
+    // 2. TikTok Extraction (TikWM No-Watermark H.264 API + oEmbed Fallback)
+    if (platform === 'tiktok' || trimmed.includes('tiktok.com') || trimmed.includes('vt.tiktok') || trimmed.includes('vm.tiktok')) {
+      // 2a. Try TikWM API (H.264 MP4, no watermark, universal compatibility)
+      try {
+        const tikwmRes = await axios.get(`https://www.tikwm.com/api/?url=${encodeURIComponent(trimmed)}&hd=1`, {
+          timeout: 5000,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'Accept': 'application/json',
+          },
+        }).catch(() => null);
+
+        if (tikwmRes?.data && tikwmRes.data.code === 0 && tikwmRes.data.data) {
+          const d = tikwmRes.data.data;
+          let videoUrl = d.play || d.hdplay || d.wmplay;
+          if (videoUrl && videoUrl.startsWith('/')) {
+            videoUrl = `https://www.tikwm.com${videoUrl}`;
+          }
+          let musicUrl = d.music;
+          if (musicUrl && musicUrl.startsWith('/')) {
+            musicUrl = `https://www.tikwm.com${musicUrl}`;
+          }
+
+          return {
+            title: d.title || 'TikTok Short Video',
+            author: d.author?.nickname ? `@${d.author.unique_id || d.author.nickname}` : '@tiktokcreator',
+            thumbnailUrl: d.cover || d.origin_cover || 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?w=600&auto=format&fit=crop&q=80',
+            directMediaUrl: videoUrl,
+            platformName: 'TikTok',
+          };
+        }
+      } catch {
+        // Fallback to oembed / HTML
+      }
+
       try {
         const oembedRes = await axios.get(`https://www.tiktok.com/oembed?url=${encodeURIComponent(trimmed)}`, { timeout: 3000 }).catch(() => null);
         const htmlOg = await this.extractOgAndDirectMedia(trimmed);
@@ -201,14 +234,16 @@ export class RealMediaExtractorService {
   public createRealStreamFromUrl(remoteMediaUrl: string): Promise<{ stream: Readable; contentLength: number; contentType: string } | null> {
     return new Promise((resolve) => {
       try {
+        const isTikTok = remoteMediaUrl.includes('tiktok') || remoteMediaUrl.includes('tikwm');
+        const referer = isTikTok ? 'https://www.tiktok.com/' : remoteMediaUrl;
         const client = remoteMediaUrl.startsWith('https') ? https : http;
         const req = client.get(
           remoteMediaUrl,
           {
             headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
               'Accept': 'video/webm,video/mp4,video/*;q=0.9,*/*;q=0.8',
-              'Referer': remoteMediaUrl,
+              'Referer': referer,
             },
             rejectUnauthorized: false,
           } as any,
@@ -221,7 +256,7 @@ export class RealMediaExtractorService {
                 contentLength: len || 5 * 1024 * 1024,
                 contentType: type,
               });
-            } else if (res.statusCode === 301 || res.statusCode === 302) {
+            } else if (res.statusCode && [301, 302, 303, 307, 308].includes(res.statusCode)) {
               const redirectUrl = res.headers.location;
               if (redirectUrl) {
                 this.createRealStreamFromUrl(redirectUrl).then(resolve);
