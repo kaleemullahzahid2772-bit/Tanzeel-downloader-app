@@ -234,8 +234,16 @@ export class RealMediaExtractorService {
   public createRealStreamFromUrl(remoteMediaUrl: string): Promise<{ stream: Readable; contentLength: number; contentType: string } | null> {
     return new Promise((resolve) => {
       try {
-        const isTikTok = remoteMediaUrl.includes('tiktok') || remoteMediaUrl.includes('tikwm');
-        const referer = isTikTok ? 'https://www.tiktok.com/' : remoteMediaUrl;
+        let referer = 'https://www.google.com/';
+        if (remoteMediaUrl.includes('tiktok') || remoteMediaUrl.includes('tikwm')) {
+          referer = 'https://www.tiktok.com/';
+        } else if (remoteMediaUrl.includes('googlevideo.com') || remoteMediaUrl.includes('youtube.com') || remoteMediaUrl.includes('youtu.be')) {
+          referer = 'https://www.youtube.com/';
+        } else if (remoteMediaUrl.includes('facebook.com') || remoteMediaUrl.includes('fbcdn.net')) {
+          referer = 'https://www.facebook.com/';
+        } else if (remoteMediaUrl.includes('instagram.com') || remoteMediaUrl.includes('cdninstagram.com')) {
+          referer = 'https://www.instagram.com/';
+        }
         const client = remoteMediaUrl.startsWith('https') ? https : http;
         const req = client.get(
           remoteMediaUrl,

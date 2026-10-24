@@ -67,15 +67,55 @@ export class YouTubeAdapter implements IPlatformAdapter {
   }
 
   public async createMediaStream(url: string, formatId?: string, title?: string): Promise<StreamMediaResult> {
-    // 1. Directly stream using real yt-dlp binary (fast - skips redundant metadata extraction)
+    const isAudio = formatId?.toLowerCase() === 'mp3' || formatId?.toLowerCase() === 'audio';
+    const safeTitle = (title || 'youtube_video').replace(/[^a-zA-Z0-9_]/g, '_');
+    const filename = `${safeTitle}.${isAudio ? 'mp3' : 'mp4'}`;
+
+    // 1. Direct fast streaming via yt-dlp extracted direct URL (2-3 seconds, ratebypass, no disk wait)
+    try {
+      const directUrl = await ytDlpExtractorService.getDirectMediaUrl(url, isAudio, formatId);
+      if (directUrl) {
+        const realStream = await realMediaExtractorService.createRealStreamFromUrl(directUrl);
+        if (realStream && realStream.stream) {
+          return {
+            stream: realStream.stream,
+            contentLength: realStream.contentLength,
+            contentType: isAudio ? 'audio/mpeg' : (realStream.contentType || 'video/mp4'),
+            filename,
+            isExactLength: realStream.contentLength > 0,
+          };
+        }
+      }
+    } catch (directErr) {
+      console.warn('[YouTubeAdapter] Direct URL fast extraction failed, falling back:', directErr);
+    }
+
+    // 2. Directly stream using real yt-dlp binary (uses optimized progressive streams)
     const ytDlpStream = await ytDlpExtractorService.createMediaStream(url, title, formatId);
     if (ytDlpStream && ytDlpStream.stream) {
       return ytDlpStream;
     }
 
-    // 2. Retry after metadata extraction if direct stream failed
+    // 3. Retry after metadata extraction if direct stream failed
     const meta = await this.extractMetadata(url).catch(() => null);
     if (meta) {
+      const selectedFormat = isAudio
+        ? meta.formats.find((f) => f.isAudioOnly && f.url)
+        : (meta.formats.find((f) => f.formatId === formatId && f.url) || meta.formats.find((f) => f.url));
+
+      if (selectedFormat?.url) {
+        const realStream = await realMediaExtractorService.createRealStreamFromUrl(selectedFormat.url);
+        if (realStream && realStream.stream) {
+          return {
+            stream: realStream.stream,
+            contentLength: realStream.contentLength,
+            contentType: isAudio ? 'audio/mpeg' : (realStream.contentType || 'video/mp4'),
+            filename,
+            isExactLength: realStream.contentLength > 0,
+          };
+        }
+      }
+
       const retryStream = await ytDlpExtractorService.createMediaStream(url, meta.title, formatId);
       if (retryStream && retryStream.stream) {
         return retryStream;

@@ -12,3 +12,5 @@ services:
         value: production
       - key: ALLOWED_ORIGINS
         value: "*"
+      - key: YT_DLP_PATH
+        value: /usr/local/bin/yt-dlp

@@ -41,9 +41,11 @@ export class YtDlpExtractorService {
     }
 
     const lowerUrl = url.toLowerCase();
+    const isYouTube = platform === 'youtube' || lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be');
     const isTikTok = lowerUrl.includes('tiktok');
     let referer = 'https://www.google.com/';
     if (isTikTok) referer = 'https://www.tiktok.com/';
+    if (isYouTube) referer = 'https://www.youtube.com/';
     if (lowerUrl.includes('facebook') || lowerUrl.includes('fb.watch') || lowerUrl.includes('fb.com')) referer = 'https://www.facebook.com/';
 
     const args = [
@@ -52,14 +54,20 @@ export class YtDlpExtractorService {
       '--no-playlist',
       '--no-check-certificate',
       '--no-update',
-      '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       '--referer', referer,
-      url,
     ];
 
-    if (isTikTok) {
-      args.splice(5, 0, '--format-sort', 'vcodec:h264');
+    if (isYouTube) {
+      args.push('--extractor-args', 'youtube:player_client=android,web');
+    } else {
+      args.push('--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
     }
+
+    if (isTikTok) {
+      args.push('--format-sort', 'vcodec:h264');
+    }
+
+    args.push(url);
 
     return new Promise((resolve) => {
       execFile(
@@ -82,6 +90,22 @@ export class YtDlpExtractorService {
               .toString()
               .padStart(2, '0')}:${(durationSeconds % 60).toString().padStart(2, '0')}`;
 
+            let directVideoUrl: string | undefined;
+            let directAudioUrl: string | undefined;
+
+            if (isYouTube && Array.isArray(data.formats)) {
+              const bestMuxed = data.formats.find(
+                (f: any) => f.url && f.vcodec !== 'none' && f.acodec !== 'none' && (f.format_id === '18' || f.format_id === '22')
+              ) || data.formats.find((f: any) => f.url && f.vcodec !== 'none' && f.acodec !== 'none');
+
+              const bestAudio = data.formats.find(
+                (f: any) => f.url && f.acodec !== 'none' && f.vcodec === 'none' && (f.format_id === '140' || f.format_id === '251')
+              ) || data.formats.find((f: any) => f.url && f.acodec !== 'none' && f.vcodec === 'none');
+
+              directVideoUrl = bestMuxed?.url;
+              directAudioUrl = bestAudio?.url || directVideoUrl;
+            }
+
             resolve({
               url,
               normalizedUrl: data.webpage_url || url,
@@ -101,6 +125,7 @@ export class YtDlpExtractorService {
                   estimatedSizeBytes: Math.round(data.filesize || data.filesize_approx || 35 * 1024 * 1024),
                   estimatedSizeFormatted: `${((data.filesize || 35 * 1024 * 1024) / (1024 * 1024)).toFixed(1)} MB`,
                   isAudioOnly: false,
+                  url: directVideoUrl,
                 },
                 {
                   formatId: '720p',
@@ -110,6 +135,7 @@ export class YtDlpExtractorService {
                   estimatedSizeBytes: Math.round((data.filesize || 35 * 1024 * 1024) * 0.6),
                   estimatedSizeFormatted: `${(((data.filesize || 35 * 1024 * 1024) * 0.6) / (1024 * 1024)).toFixed(1)} MB`,
                   isAudioOnly: false,
+                  url: directVideoUrl,
                 },
                 {
                   formatId: 'audio',
@@ -119,6 +145,7 @@ export class YtDlpExtractorService {
                   estimatedSizeBytes: 5 * 1024 * 1024,
                   estimatedSizeFormatted: '5.0 MB',
                   isAudioOnly: true,
+                  url: directAudioUrl,
                 },
               ],
               analyzedAt: new Date().toISOString(),
@@ -126,6 +153,46 @@ export class YtDlpExtractorService {
           } catch {
             resolve(null);
           }
+        }
+      );
+    });
+  }
+
+  public async getDirectMediaUrl(url: string, isAudio: boolean = false, quality?: string): Promise<string | null> {
+    if (!this.isAvailable()) return null;
+    if (url.includes('123456') || url.includes('sample_id')) return null;
+
+    let formatSelector = '18/b/best[height<=720]/best';
+    if (isAudio) {
+      formatSelector = '140/ba/b';
+    } else if (quality === '1080p') {
+      formatSelector = 'b[height<=1080]/best[height<=1080]/18/b/best';
+    } else if (quality === '720p') {
+      formatSelector = '22/b[height<=720]/18/best[height<=720]/best';
+    }
+
+    const args = [
+      '--no-playlist',
+      '--no-check-certificate',
+      '--no-warnings',
+      '--extractor-args', 'youtube:player_client=android,web',
+      '-g',
+      '-f', formatSelector,
+      url,
+    ];
+
+    return new Promise((resolve) => {
+      execFile(
+        this.ytDlpPath,
+        args,
+        { timeout: 15000 },
+        (err, stdout) => {
+          if (err || !stdout) {
+            return resolve(null);
+          }
+          const lines = stdout.trim().split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+          const directUrl = lines.find((l) => l.startsWith('http://') || l.startsWith('https://'));
+          resolve(directUrl || null);
         }
       );
     });
@@ -144,19 +211,34 @@ export class YtDlpExtractorService {
     const filename = `${safeTitle}.${isAudio ? 'mp3' : 'mp4'}`;
 
     const lowerUrl = url.toLowerCase();
+    const isYouTube = lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be');
     const isTikTok = lowerUrl.includes('tiktok');
     const isFacebook = lowerUrl.includes('facebook') || lowerUrl.includes('fb.watch') || lowerUrl.includes('fb.com');
 
     let referer = 'https://www.google.com/';
     if (isTikTok) referer = 'https://www.tiktok.com/';
     if (isFacebook) referer = 'https://www.facebook.com/';
+    if (isYouTube) referer = 'https://www.youtube.com/';
 
     const ffmpegBinary = ffmpegInstaller?.path && fs.existsSync(ffmpegInstaller.path) ? ffmpegInstaller.path : null;
 
     // Quality format selection
     let formatString = 'bv*[height<=720][ext=mp4]+ba[ext=m4a]/b[height<=720][ext=mp4]/bv*[height<=720]+ba/best[height<=720]/best';
     if (isAudio) {
-      formatString = 'ba/b';
+      formatString = isYouTube ? '140/ba/b' : 'ba/b';
+    } else if (isYouTube) {
+      // Prioritize progressive streams that download smoothly without SABR freeze
+      if (quality === '1080p') {
+        formatString = 'b[height<=1080]/best[height<=1080]/18/b/best';
+      } else if (quality === '720p') {
+        formatString = '22/b[height<=720]/18/best[height<=720]/best';
+      } else if (quality === '480p') {
+        formatString = '18/b[height<=480]/best[height<=480]/best';
+      } else if (quality === '360p') {
+        formatString = '18/b[height<=360]/best[height<=360]/best';
+      } else {
+        formatString = '18/b[height<=720]/best[height<=720]/best';
+      }
     } else if (isTikTok) {
       // Prioritize H.264 (AVC) codec for TikTok so that all media players (Windows, Android, VLC) can play the video
       if (quality === '1080p') {
@@ -188,11 +270,16 @@ export class YtDlpExtractorService {
       '--no-check-certificate',
       '--no-update',
       '--no-warnings',
-      '--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       '--referer', referer,
       '-f', formatString,
       '-o', outputTemplate,
     ];
+
+    if (isYouTube) {
+      args.push('--extractor-args', 'youtube:player_client=android,web');
+    } else {
+      args.push('--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    }
 
     if (isTikTok) {
       args.push('--format-sort', 'vcodec:h264');
