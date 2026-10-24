@@ -6,9 +6,14 @@ import { StatusScreen } from './ui/screens/StatusScreen';
 import { ThemeProvider } from './ui/context/ThemeContext';
 import { SettingsProvider } from './ui/context/SettingsContext';
 import { DownloadsProvider } from './ui/context/DownloadsContext';
+import { UpdateBanner } from './ui/components/common/UpdateBanner';
+import { WhatsAppComingSoonModal } from './ui/components/status/WhatsAppComingSoonModal';
+import { useAppUpdate } from './ui/hooks/useAppUpdate';
 
 const MainAppContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('home');
+  const [isComingSoonModalOpen, setIsComingSoonModalOpen] = useState<boolean>(false);
+  const { hasUpdate, version, applyUpdate, dismissUpdate } = useAppUpdate();
 
   return (
     <div className="min-h-[100dvh] w-full bg-gradient-to-b from-[#edf8f2] via-[#e7f4ed] to-[#f2faf6] text-slate-900 flex flex-col items-center justify-between font-sans selection:bg-emerald-500/20 selection:text-emerald-950 relative overflow-x-hidden">
@@ -21,10 +26,21 @@ const MainAppContent: React.FC = () => {
       </div>
 
       {/* Main Responsive Application Shell */}
-      <div className="w-full max-w-2xl sm:max-w-3xl flex-1 flex flex-col justify-start px-3.5 sm:px-6 md:px-8 pt-4 pb-28 sm:pb-32 relative z-10 transition-all">
+      <div className="w-full max-w-2xl sm:max-w-3xl flex-1 flex flex-col justify-start px-3.5 sm:px-6 md:px-8 pt-3 pb-28 sm:pb-32 relative z-10 transition-all">
+        
+        {/* Top App Update Banner (Visible when any update/change occurs) */}
+        <UpdateBanner
+          hasUpdate={hasUpdate}
+          version={version}
+          onUpdate={applyUpdate}
+          onDismiss={dismissUpdate}
+        />
+
         <main className="w-full flex-1 flex flex-col justify-center">
           {activeTab === 'home' && <HomeScreen />}
-          {activeTab === 'status' && <StatusScreen />}
+          {activeTab === 'status' && (
+            <StatusScreen onBackToHome={() => setActiveTab('home')} />
+          )}
         </main>
       </div>
 
@@ -32,6 +48,13 @@ const MainAppContent: React.FC = () => {
       <BottomNavigationBar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
+        onStatusClick={() => setIsComingSoonModalOpen(true)}
+      />
+
+      {/* WhatsApp Status Coming Soon Modal */}
+      <WhatsAppComingSoonModal
+        isOpen={isComingSoonModalOpen}
+        onClose={() => setIsComingSoonModalOpen(false)}
       />
     </div>
   );

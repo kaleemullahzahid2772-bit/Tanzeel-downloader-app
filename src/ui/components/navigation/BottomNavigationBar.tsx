@@ -7,20 +7,29 @@ export type TabType = 'home' | 'status';
 interface BottomNavigationBarProps {
   activeTab: TabType;
   setActiveTab: (tab: TabType) => void;
+  onStatusClick?: () => void;
   downloadCount?: number;
 }
 
 export const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
   activeTab,
   setActiveTab,
+  onStatusClick,
 }) => {
   const tabs = [
     { id: 'home' as TabType, label: 'Downloader', icon: Download },
     { id: 'status' as TabType, label: 'WhatsApp Status', icon: MessageSquare },
   ];
 
+  const handleTabClick = (tabId: TabType) => {
+    setActiveTab(tabId);
+    if (tabId === 'status' && onStatusClick) {
+      onStatusClick();
+    }
+  };
+
   return (
-    <nav className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-50 bg-white/85 backdrop-blur-2xl border border-white/90 shadow-2xl shadow-emerald-950/15 rounded-full p-1.5 flex items-center justify-center ring-1 ring-emerald-500/10">
+    <nav className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-40 bg-white/85 backdrop-blur-2xl border border-white/90 shadow-2xl shadow-emerald-950/15 rounded-full p-1.5 flex items-center justify-center ring-1 ring-emerald-500/10">
       <div className="flex items-center gap-1 sm:gap-1.5">
         {tabs.map((tab) => {
           const Icon = tab.icon;
@@ -29,7 +38,7 @@ export const BottomNavigationBar: React.FC<BottomNavigationBarProps> = ({
           return (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabClick(tab.id)}
               className="relative flex items-center gap-2 py-2 px-4 sm:px-6 rounded-full transition-all duration-300 group cursor-pointer"
             >
               {/* Active Indicator Background pill */}

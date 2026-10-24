@@ -12,7 +12,12 @@ export function registerServiceWorker() {
         .then((registration) => {
           console.log('[PWA] Service Worker registered with scope:', registration.scope);
 
-          // Check for service worker updates periodically
+          // Check if there is already a waiting service worker
+          if (registration.waiting) {
+            window.dispatchEvent(new Event('swUpdateFound'));
+          }
+
+          // Check for service worker updates
           registration.addEventListener('updatefound', () => {
             const installingWorker = registration.installing;
             if (!installingWorker) return;
@@ -21,6 +26,7 @@ export function registerServiceWorker() {
               if (installingWorker.state === 'installed') {
                 if (navigator.serviceWorker.controller) {
                   console.log('[PWA] New version available! Reloading or ready.');
+                  window.dispatchEvent(new Event('swUpdateFound'));
                 } else {
                   console.log('[PWA] App is cached for offline use.');
                 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Download, Clipboard, X, AlertCircle, CheckCircle2, WifiOff, Heart, Copy, Check, Info, Share2, Link as LinkIcon, Sparkles } from 'lucide-react';
+import { Download, Clipboard, X, AlertCircle, CheckCircle2, WifiOff, Heart, Copy, Check, Info, Share2, Link as LinkIcon, Sparkles, ExternalLink } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDownloads } from '../context/DownloadsContext';
 import { platformDetectorService } from '../../services/PlatformDetectorService';
@@ -242,7 +242,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
       {!isOnline && (
         <div className="w-full my-2 p-3 rounded-2xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold flex items-center gap-2 animate-fadeIn shadow-sm">
           <WifiOff className="w-4 h-4 text-amber-600 shrink-0" />
-          <span>Offline Mode — Local downloads & WhatsApp statuses remain viewable.</span>
+          <span>Offline Mode — Local downloads remain viewable.</span>
         </div>
       )}
 
@@ -255,38 +255,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
         {/* Top Gold Border Line Accent */}
         <div className="absolute top-0 inset-x-8 sm:inset-x-16 h-[3px] bg-gradient-to-r from-transparent via-amber-400/90 to-transparent opacity-80" />
 
-        {/* 1. Large Arabic Calligraphy Title: سحر التحميل */}
-        <div className="text-center pt-1 space-y-2">
-          <h1 className="text-4xl sm:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-950 via-teal-900 to-emerald-900 font-arabic tracking-wide leading-tight drop-shadow-xs">
-            سحر التحميل
+        {/* Clean, Simple & Modern Header */}
+        <div className="text-center pt-2 pb-1 space-y-1.5">
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            Video Downloader
           </h1>
-          
-          <p className="text-xs sm:text-sm text-slate-600 font-medium text-center max-w-sm mx-auto leading-relaxed">
-            Paste any video link to download in HD quality. Free, fast, no ads.
+          <p className="text-xs sm:text-sm text-slate-500 font-medium text-center max-w-sm mx-auto leading-relaxed">
+            Paste any video link to download in HD quality • Fast & Free
           </p>
 
-          {/* Supported Platforms Chips */}
-          <div className="flex items-center justify-center flex-wrap gap-1.5 sm:gap-2 pt-1 pb-1">
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-red-50 text-red-600 border border-red-200/60 shadow-2xs">
-              <YoutubeIcon className="w-3.5 h-3.5" />
-              <span>YouTube</span>
-            </span>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-slate-900 text-white border border-slate-700 shadow-2xs">
-              <TiktokIcon className="w-3.5 h-3.5 text-cyan-400" />
-              <span>TikTok</span>
-            </span>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-pink-50 text-pink-600 border border-pink-200/60 shadow-2xs">
-              <InstagramIcon className="w-3.5 h-3.5 text-pink-600" />
-              <span>Instagram</span>
-            </span>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-blue-50 text-blue-600 border border-blue-200/60 shadow-2xs">
-              <FacebookIcon className="w-3.5 h-3.5 text-blue-600" />
-              <span>Facebook</span>
-            </span>
-          </div>
-
           {/* Downloads Served Counter Pill */}
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 bg-emerald-50/90 text-emerald-800 border border-emerald-200/80 rounded-full text-[11px] font-bold shadow-2xs">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 bg-emerald-50/90 text-emerald-800 border border-emerald-200/80 rounded-full text-[11px] font-bold shadow-2xs mt-1">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-600"></span>
@@ -295,7 +274,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
           </div>
         </div>
 
-        {/* 2. Link Input Field (Pill Shape with Real-time Platform Detection) */}
+        {/* Link Input Field (Pill Shape with Real-time Platform Detection) */}
         <div className="w-full pt-1">
           <div className="relative w-full rounded-full border-2 border-emerald-500/35 bg-white px-4 sm:px-5 py-3 sm:py-3.5 flex items-center gap-3 shadow-xs focus-within:border-emerald-600 focus-within:ring-4 focus-within:ring-emerald-500/10 transition-all">
             {renderInputIcon()}
@@ -312,7 +291,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
                   handleDownloadClick();
                 }
               }}
-              placeholder="Paste video link (YouTube, TikTok, Reels, FB)..."
+              placeholder="Paste video link here..."
               className="w-full bg-transparent text-slate-800 placeholder-slate-400 text-sm sm:text-base font-medium focus:outline-none"
             />
 
@@ -376,7 +355,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
           )}
         </div>
 
-        {/* Format Selection Vertical Slide-up Stack (Clean Black Boxes directly above Download button) */}
+        {/* Format Selection Vertical Slide-up Stack */}
         <AnimatePresence>
           {isOptionsModalOpen && (
             <motion.div
@@ -415,7 +394,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
           )}
         </AnimatePresence>
 
-        {/* 3. Giant Circular Download Button with Ambient Glow */}
+        {/* Giant Circular Download Button with Ambient Glow */}
         <div className="pt-2 flex justify-center">
           <div className="relative group">
             <div className="absolute -inset-2 bg-gradient-to-r from-emerald-400 via-teal-400 to-emerald-500 rounded-full blur-md opacity-35 group-hover:opacity-75 transition-opacity duration-300" />
@@ -436,26 +415,21 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
 
       </div>
 
-      {/* Feature Highlights beneath Main Card */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-4 max-w-xl mx-auto w-full pt-1 text-center">
-        <div className="p-2 sm:p-2.5 rounded-2xl bg-white/70 backdrop-blur-md border border-emerald-100/90 shadow-2xs flex flex-col items-center">
-          <span className="text-base sm:text-lg">⚡</span>
-          <span className="text-[11px] sm:text-xs font-bold text-slate-800 mt-0.5">Ultra Fast</span>
-          <span className="text-[9px] sm:text-[10px] text-slate-500 font-medium hidden sm:inline">Instant High Speed</span>
-        </div>
-        <div className="p-2 sm:p-2.5 rounded-2xl bg-white/70 backdrop-blur-md border border-emerald-100/90 shadow-2xs flex flex-col items-center">
-          <span className="text-base sm:text-lg">🎬</span>
-          <span className="text-[11px] sm:text-xs font-bold text-slate-800 mt-0.5">Full HD & 4K</span>
-          <span className="text-[9px] sm:text-[10px] text-slate-500 font-medium hidden sm:inline">Original Bitrate</span>
-        </div>
-        <div className="p-2 sm:p-2.5 rounded-2xl bg-white/70 backdrop-blur-md border border-emerald-100/90 shadow-2xs flex flex-col items-center">
-          <span className="text-base sm:text-lg">🛡️</span>
-          <span className="text-[11px] sm:text-xs font-bold text-slate-800 mt-0.5">100% Free</span>
-          <span className="text-[9px] sm:text-[10px] text-slate-500 font-medium hidden sm:inline">No Ads & No Logs</span>
-        </div>
+      {/* Clean Developer Footer at Bottom with Kaleemullah Zahid Link */}
+      <div className="w-full text-center py-2">
+        <p className="text-xs text-slate-500 font-medium">
+          Designed & Developed by{' '}
+          <a
+            href="https://www.kaleemullahzahid.online/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-bold text-emerald-800 hover:text-emerald-950 hover:underline transition-colors inline-flex items-center gap-0.5"
+          >
+            <span>Kaleem Ullah Zahid</span>
+            <ExternalLink className="w-3 h-3 text-emerald-700" />
+          </a>
+        </p>
       </div>
-
-      <div className="pb-4" />
 
       {/* Support TANZEEL App Modal */}
       {isSupportModalOpen && (
@@ -469,7 +443,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
           >
             <button
               onClick={() => setIsSupportModalOpen(false)}
-              className="absolute top-4 right-4 p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+              className="absolute top-4 right-4 p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -479,38 +453,47 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
                 Support TANZEEL App 💚
               </h2>
               <p className="text-xs text-slate-600 leading-relaxed font-medium px-1">
-                If TANZEEL is useful to you, a small tip can help keep it running — completely optional 💚
+                Thank you for using Tanzeel Pro! For queries, feedback, or collaborations, feel free to reach out.
               </p>
             </div>
 
-            <div className="bg-emerald-50/90 border border-emerald-200/80 rounded-2xl p-4 text-left space-y-2 text-slate-800 shadow-inner">
-              <div className="text-xs font-bold text-emerald-800 flex items-center gap-1.5">
-                <span>💚 Donate via Raast ID</span>
+            <div className="bg-emerald-50/90 border border-emerald-200/80 rounded-2xl p-4 text-left space-y-2.5 text-slate-800 shadow-inner">
+              <div className="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
+                <span>💚 Contact & Developer Info</span>
               </div>
-              <div className="text-xs space-y-1 font-mono pt-1">
-                <div>
-                  <span className="text-slate-500 font-sans">Raast ID: </span>
-                  <span className="font-bold text-slate-900">03274816872</span>
-                </div>
-                <div className="break-all">
+              <div className="text-xs space-y-2 pt-1">
+                <div className="break-all flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                   <span className="text-slate-500 font-sans">Email: </span>
-                  <span className="font-medium text-slate-900">kaleemullahzahid2772@gmail.com</span>
+                  <a
+                    href="mailto:support@tanzeel.pro"
+                    className="font-bold text-emerald-800 hover:underline font-mono"
+                  >
+                    support@tanzeel.pro
+                  </a>
                 </div>
-                <div>
-                  <span className="text-slate-500 font-sans">Nick: </span>
-                  <span className="font-semibold text-slate-900">Kaleem Ullah Zahid</span>
+                <div className="flex items-center justify-between pt-1 border-t border-emerald-200/60">
+                  <span className="text-slate-500 font-sans">Developer: </span>
+                  <a
+                    href="https://www.kaleemullahzahid.online/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-bold text-emerald-800 hover:text-emerald-950 hover:underline inline-flex items-center gap-1 font-sans"
+                  >
+                    <span>Kaleem Ullah Zahid</span>
+                    <ExternalLink className="w-3 h-3 text-emerald-700" />
+                  </a>
                 </div>
               </div>
             </div>
 
             <p className="text-center text-[11px] font-medium text-slate-500">
-              Thank you for your support!
+              Thank you for your love and support!
             </p>
 
             <div className="flex items-center gap-2 pt-1">
               <button
-                onClick={() => handleCopyText('kaleemullahzahid2772@gmail.com', 'Email')}
-                className="flex-1 py-2.5 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl active:scale-95 transition-all flex items-center justify-center gap-1"
+                onClick={() => handleCopyText('support@tanzeel.pro', 'Email')}
+                className="flex-1 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-600/30 active:scale-95 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Copy className="w-3.5 h-3.5" />
                 <span>COPY EMAIL</span>
@@ -518,24 +501,16 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
 
               <button
                 onClick={() => setIsSupportModalOpen(false)}
-                className="py-2.5 px-4 bg-slate-200 hover:bg-slate-300 text-slate-800 text-xs font-bold rounded-xl active:scale-95 transition-all"
+                className="flex-1 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl active:scale-95 transition-all cursor-pointer"
               >
                 CLOSE
-              </button>
-
-              <button
-                onClick={() => handleCopyText('03274816872', 'Raast ID')}
-                className="flex-1 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md shadow-emerald-600/30 active:scale-95 transition-all flex items-center justify-center gap-1"
-              >
-                <Copy className="w-3.5 h-3.5" />
-                <span>COPY RAAST</span>
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* About Tanzeel Pro Modal */}
+      {/* About Tanzeel Pro Modal (Top Left Info Button) */}
       {isAboutModalOpen && (
         <div
           onClick={() => setIsAboutModalOpen(false)}
@@ -547,7 +522,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
           >
             <button
               onClick={() => setIsAboutModalOpen(false)}
-              className="absolute top-4 right-4 p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+              className="absolute top-4 right-4 p-1.5 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
@@ -561,13 +536,32 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
               </p>
             </div>
 
+            {/* Feature Highlights Moved From Main UI to Info Modal */}
+            <div className="grid grid-cols-3 gap-2 py-1">
+              <div className="p-2.5 rounded-2xl bg-gradient-to-b from-amber-50 to-amber-100/50 border border-amber-200/80 text-center flex flex-col items-center justify-center shadow-2xs">
+                <span className="text-base sm:text-lg">⚡</span>
+                <span className="text-[11px] font-extrabold text-amber-950 mt-1 font-arabic">الٹرا فاسٹ</span>
+                <span className="text-[9px] text-amber-800 font-semibold">Ultra Fast</span>
+              </div>
+              <div className="p-2.5 rounded-2xl bg-gradient-to-b from-emerald-50 to-emerald-100/50 border border-emerald-200/80 text-center flex flex-col items-center justify-center shadow-2xs">
+                <span className="text-base sm:text-lg">🎬</span>
+                <span className="text-[11px] font-extrabold text-emerald-950 mt-1 font-arabic">فل ایچ ڈی</span>
+                <span className="text-[9px] text-emerald-800 font-semibold">Full HD</span>
+              </div>
+              <div className="p-2.5 rounded-2xl bg-gradient-to-b from-teal-50 to-teal-100/50 border border-teal-200/80 text-center flex flex-col items-center justify-center shadow-2xs">
+                <span className="text-base sm:text-lg">🛡️</span>
+                <span className="text-[11px] font-extrabold text-teal-950 mt-1 font-arabic">100٪ فری</span>
+                <span className="text-[9px] text-teal-800 font-semibold">100% Free</span>
+              </div>
+            </div>
+
             <div className="bg-emerald-50/90 border border-emerald-200/80 rounded-2xl p-4 space-y-2 text-slate-800 shadow-inner">
               <div className="text-xs font-bold text-emerald-900 flex items-center gap-1.5">
                 <span>Key Features</span>
               </div>
               <ul className="text-xs text-slate-700 space-y-1.5 pt-0.5 leading-tight font-medium">
-                <li>• YouTube, Instagram, Twitter, TikTok, Facebook support</li>
-                <li>• Download Full HD & high quality MP4 videos</li>
+                <li>• Multi-platform video download support</li>
+                <li>• Download Full HD & high quality MP4 & MP3 audio</li>
                 <li>• Clean, ad-free experience</li>
                 <li>• Install as app on your device (PWA)</li>
               </ul>
@@ -611,16 +605,24 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
               </div>
             </div>
 
-            <div className="text-center pt-1">
+            <div className="text-center pt-1 space-y-1">
               <p className="text-[11px] text-slate-500 font-medium">
-                Version 1.1.0 · A project by Al-Ulama & Sudoor.org
+                Version 1.2.0 · Developed by{' '}
+                <a
+                  href="https://www.kaleemullahzahid.online/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-bold text-emerald-800 hover:underline"
+                >
+                  Kaleem Ullah Zahid
+                </a>
               </p>
             </div>
 
             <div className="pt-1">
               <button
                 onClick={() => setIsAboutModalOpen(false)}
-                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-2xl shadow-md shadow-emerald-600/30 active:scale-95 transition-all text-center"
+                className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-2xl shadow-md shadow-emerald-600/30 active:scale-95 transition-all text-center cursor-pointer"
               >
                 GOT IT
               </button>
