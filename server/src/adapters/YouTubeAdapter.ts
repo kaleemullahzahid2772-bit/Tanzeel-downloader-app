@@ -90,13 +90,23 @@ export class YouTubeAdapter implements IPlatformAdapter {
       console.warn('[YouTubeAdapter] Direct URL fast extraction failed, falling back:', directErr);
     }
 
-    // 2. Directly stream using real yt-dlp binary (uses optimized progressive streams)
+    // 2. Direct fast stdout progressive streaming (4-6 seconds, no disk wait, cloud resilient)
+    try {
+      const stdoutStream = await ytDlpExtractorService.createStdoutMediaStream(url, title, formatId);
+      if (stdoutStream && stdoutStream.stream) {
+        return stdoutStream;
+      }
+    } catch (stdoutErr) {
+      console.warn('[YouTubeAdapter] Stdout fast streaming failed, falling back to disk:', stdoutErr);
+    }
+
+    // 3. Fallback to real yt-dlp binary disk output (uses optimized progressive streams)
     const ytDlpStream = await ytDlpExtractorService.createMediaStream(url, title, formatId);
     if (ytDlpStream && ytDlpStream.stream) {
       return ytDlpStream;
     }
 
-    // 3. Retry after metadata extraction if direct stream failed
+    // 4. Retry after metadata extraction if direct stream failed
     const meta = await this.extractMetadata(url).catch(() => null);
     if (meta) {
       const selectedFormat = isAudio

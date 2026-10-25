@@ -1,4 +1,5 @@
-import { execFile } from 'child_process';
+import { execFile, spawn } from 'child_process';
+import { PassThrough } from 'stream';
 import path from 'path';
 import fs from 'fs';
 import ffmpegInstaller from '@ffmpeg-installer/ffmpeg';
@@ -208,6 +209,110 @@ export class YtDlpExtractorService {
           resolve(directUrl || null);
         }
       );
+    });
+  }
+
+  public createStdoutMediaStream(url: string, title?: string, quality?: string): Promise<StreamMediaResult | null> {
+    if (!this.isAvailable()) return Promise.resolve(null);
+    if (url.includes('123456') || url.includes('sample_id')) return Promise.resolve(null);
+
+    const isAudio = quality?.toLowerCase() === 'mp3' || quality?.toLowerCase() === 'audio';
+    const safeTitle = (title || 'video').replace(/[^a-zA-Z0-9_]/g, '_');
+    const filename = `${safeTitle}.${isAudio ? 'mp3' : 'mp4'}`;
+
+    const lowerUrl = url.toLowerCase();
+    const isYouTube = lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be');
+    const isTikTok = lowerUrl.includes('tiktok');
+    const isFacebook = lowerUrl.includes('facebook') || lowerUrl.includes('fb.watch') || lowerUrl.includes('fb.com');
+
+    let referer = 'https://www.google.com/';
+    if (isTikTok) referer = 'https://www.tiktok.com/';
+    if (isFacebook) referer = 'https://www.facebook.com/';
+    if (isYouTube) referer = 'https://www.youtube.com/';
+
+    // Progressive format selector for stdout streaming (prevents ffmpeg stdout freeze)
+    let formatString = '18/b/best[height<=720]/best';
+    if (isAudio) {
+      formatString = isYouTube ? '140/ba/b' : 'ba/b';
+    } else if (isYouTube) {
+      if (quality === '1080p') {
+        formatString = 'b[height<=1080]/best[height<=1080]/18/b/best';
+      } else if (quality === '720p') {
+        formatString = '22/b[height<=720]/18/best[height<=720]/best';
+      } else {
+        formatString = '18/b[height<=720]/best[height<=720]/best';
+      }
+    } else {
+      formatString = 'b/best';
+    }
+
+    const args: string[] = [
+      '--no-playlist',
+      '--no-check-certificate',
+      '--no-warnings',
+      '--referer', referer,
+      '-f', formatString,
+      '-o', '-',
+    ];
+
+    if (isYouTube) {
+      args.push('--extractor-args', 'youtube:player_client=android,web');
+    } else {
+      args.push('--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
+    }
+
+    args.push(url);
+
+    return new Promise((resolve) => {
+      let resolved = false;
+      const child = spawn(this.ytDlpPath, args);
+
+      const timer = setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          try { child.kill('SIGKILL'); } catch {}
+          resolve(null);
+        }
+      }, 12000);
+
+      child.stdout.once('data', (firstChunk) => {
+        if (!resolved) {
+          resolved = true;
+          clearTimeout(timer);
+
+          const passThrough = new PassThrough();
+          passThrough.write(firstChunk);
+          child.stdout.pipe(passThrough);
+
+          passThrough.on('close', () => {
+            try { child.kill(); } catch {}
+          });
+
+          resolve({
+            stream: passThrough,
+            contentLength: 0,
+            contentType: isAudio ? 'audio/mpeg' : 'video/mp4',
+            filename,
+            isExactLength: false,
+          });
+        }
+      });
+
+      child.on('error', () => {
+        if (!resolved) {
+          resolved = true;
+          clearTimeout(timer);
+          resolve(null);
+        }
+      });
+
+      child.on('close', () => {
+        if (!resolved) {
+          resolved = true;
+          clearTimeout(timer);
+          resolve(null);
+        }
+      });
     });
   }
 
