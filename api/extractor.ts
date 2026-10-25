@@ -6,6 +6,8 @@ import fs from 'fs';
 import path from 'path';
 import { Readable } from 'stream';
 
+const insecureHttpsAgent = new https.Agent({ rejectUnauthorized: false, keepAlive: true });
+
 export interface FormatOption {
   formatId: string;
   resolution: string;
@@ -113,6 +115,7 @@ export async function extractHtmlAndOg(url: string): Promise<{ title?: string; a
       },
       timeout: 3500,
       maxRedirects: 5,
+      httpsAgent: insecureHttpsAgent,
     });
 
     const html = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
@@ -575,6 +578,7 @@ export function createRemoteStream(remoteUrl: string): Promise<{ stream: Readabl
             'Accept': '*/*',
             'Referer': referer,
           },
+          agent: remoteUrl.startsWith('https') ? insecureHttpsAgent : undefined,
           rejectUnauthorized: false,
         } as any,
         (res) => {

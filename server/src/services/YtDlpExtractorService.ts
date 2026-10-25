@@ -162,24 +162,37 @@ export class YtDlpExtractorService {
     if (!this.isAvailable()) return null;
     if (url.includes('123456') || url.includes('sample_id')) return null;
 
+    const lowerUrl = url.toLowerCase();
+    const isYouTube = lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be');
+
     let formatSelector = '18/b/best[height<=720]/best';
     if (isAudio) {
-      formatSelector = '140/ba/b';
-    } else if (quality === '1080p') {
-      formatSelector = 'b[height<=1080]/best[height<=1080]/18/b/best';
-    } else if (quality === '720p') {
-      formatSelector = '22/b[height<=720]/18/best[height<=720]/best';
+      formatSelector = isYouTube ? '140/ba/b' : 'ba/b';
+    } else if (isYouTube) {
+      if (quality === '1080p') {
+        formatSelector = 'b[height<=1080]/best[height<=1080]/18/b/best';
+      } else if (quality === '720p') {
+        formatSelector = '22/b[height<=720]/18/best[height<=720]/best';
+      }
+    } else {
+      formatSelector = 'b/best';
     }
 
     const args = [
       '--no-playlist',
       '--no-check-certificate',
       '--no-warnings',
-      '--extractor-args', 'youtube:player_client=android,web',
       '-g',
       '-f', formatSelector,
-      url,
     ];
+
+    if (isYouTube) {
+      args.push('--extractor-args', 'youtube:player_client=android,web');
+    } else {
+      args.push('--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
+    }
+
+    args.push(url);
 
     return new Promise((resolve) => {
       execFile(
@@ -270,6 +283,7 @@ export class YtDlpExtractorService {
       '--no-check-certificate',
       '--no-update',
       '--no-warnings',
+      '--concurrent-fragments', '4',
       '--referer', referer,
       '-f', formatString,
       '-o', outputTemplate,

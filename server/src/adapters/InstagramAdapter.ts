@@ -50,13 +50,57 @@ export class InstagramAdapter implements IPlatformAdapter {
   }
 
   public async createMediaStream(url: string, formatId?: string, title?: string): Promise<StreamMediaResult> {
-    // 1. Try real yt-dlp binary stream output directly (fast)
+    const isAudio = formatId?.toLowerCase() === 'mp3' || formatId?.toLowerCase() === 'audio';
+
+    // 1. Fast direct HTML / OpenGraph extracted media URL stream (1-3 seconds)
+    try {
+      const realMeta = await realMediaExtractorService.fetchRealMetadata(url, 'instagram');
+      if (realMeta?.directMediaUrl) {
+        const safeTitle = (title || realMeta.title || 'instagram_video').replace(/[^a-zA-Z0-9_]/g, '_');
+        const filename = `${safeTitle}.${isAudio ? 'mp3' : 'mp4'}`;
+        const realStream = await realMediaExtractorService.createRealStreamFromUrl(realMeta.directMediaUrl);
+        if (realStream && realStream.stream) {
+          return {
+            stream: realStream.stream,
+            contentLength: realStream.contentLength,
+            contentType: isAudio ? 'audio/mpeg' : (realStream.contentType || 'video/mp4'),
+            filename,
+            isExactLength: realStream.contentLength > 0,
+          };
+        }
+      }
+    } catch {
+      // Fallback
+    }
+
+    // 2. Direct fast extraction via yt-dlp direct URL
+    try {
+      const directUrl = await ytDlpExtractorService.getDirectMediaUrl(url, isAudio, formatId);
+      if (directUrl) {
+        const safeTitle = (title || 'instagram_video').replace(/[^a-zA-Z0-9_]/g, '_');
+        const filename = `${safeTitle}.${isAudio ? 'mp3' : 'mp4'}`;
+        const realStream = await realMediaExtractorService.createRealStreamFromUrl(directUrl);
+        if (realStream && realStream.stream) {
+          return {
+            stream: realStream.stream,
+            contentLength: realStream.contentLength,
+            contentType: isAudio ? 'audio/mpeg' : (realStream.contentType || 'video/mp4'),
+            filename,
+            isExactLength: realStream.contentLength > 0,
+          };
+        }
+      }
+    } catch {
+      // Fallback
+    }
+
+    // 3. Fallback to real yt-dlp binary stream output (bulletproof backup)
     const ytDlpStream = await ytDlpExtractorService.createMediaStream(url, title, formatId);
     if (ytDlpStream && ytDlpStream.stream) {
       return ytDlpStream;
     }
 
-    // 2. Direct HTML extracted media URL stream
+    // 4. Secondary fallback via extractMetadata if needed
     const meta = await this.extractMetadata(url).catch(() => null);
     if (meta) {
       const isAudio = formatId?.toLowerCase() === 'mp3' || formatId?.toLowerCase() === 'audio';
