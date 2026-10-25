@@ -55,6 +55,14 @@ export class VideoIdExtractor implements IVideoIdExtractor {
           }
           return null;
 
+        case PlatformType.PINTEREST:
+          // pinterest.com/pin/ID/ or pin.it/ID
+          const pinMatch = pathname.match(/\/(?:pin\/)?([a-zA-Z0-9_-]+)/i);
+          if (pinMatch && pinMatch[1]) {
+            return pinMatch[1];
+          }
+          return null;
+
         default:
           return null;
       }

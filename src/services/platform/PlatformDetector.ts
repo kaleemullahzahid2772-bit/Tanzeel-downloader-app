@@ -37,6 +37,11 @@ export class PlatformDetector implements IPlatformDetector {
         return PlatformType.INSTAGRAM;
       }
 
+      // Pinterest Detection
+      if (host.includes('pinterest.com') || host.includes('pin.it')) {
+        return PlatformType.PINTEREST;
+      }
+
       return PlatformType.UNKNOWN;
     } catch {
       return PlatformType.UNKNOWN;

@@ -29,6 +29,12 @@ describe('Phase 3 - Backend API & Media Extractor Integration Tests', () => {
       expect(meta.title).toBeTruthy();
     });
 
+    it('analyzes Pinterest URL correctly', async () => {
+      const meta = await mediaExtractorService.analyzeUrl('https://www.pinterest.com/pin/123456/');
+      expect(meta.platform).toBe('pinterest');
+      expect(meta.title).toBeTruthy();
+    });
+
     it('rejects empty URL input', async () => {
       await expect(mediaExtractorService.analyzeUrl('')).rejects.toThrow('Paste a video link to continue.');
     });

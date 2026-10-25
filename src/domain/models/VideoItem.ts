@@ -1,4 +1,4 @@
-export type SupportedPlatform = 'youtube' | 'tiktok' | 'facebook' | 'instagram' | 'unknown';
+export type SupportedPlatform = 'youtube' | 'tiktok' | 'facebook' | 'instagram' | 'pinterest' | 'unknown';
 
 export interface VideoQualityOption {
   label: string; // e.g. '1080p Full HD', '720p HD', '480p SD', '128kbps Audio MP3'

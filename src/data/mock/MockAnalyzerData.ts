@@ -61,6 +61,20 @@ export const MOCK_ANALYZER_RESPONSES: Record<SupportedPlatform, VideoAnalysisRes
     analyzedAt: new Date().toISOString(),
     isMockData: true,
   },
+  pinterest: {
+    url: 'https://pinterest.com/pin/123456789012345678/',
+    platform: 'pinterest',
+    title: 'Creative Design & Inspiration Pin',
+    author: '@creativepins',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80',
+    duration: '00:45',
+    qualities: [
+      { label: '720p HD (MP4)', resolution: '720p', estimatedSize: '10.5 MB', format: 'mp4' },
+      { label: 'Original Audio (MP3)', resolution: 'audio', estimatedSize: '2.1 MB', format: 'mp3', isAudioOnly: true },
+    ],
+    analyzedAt: new Date().toISOString(),
+    isMockData: true,
+  },
   unknown: {
     url: 'https://example.com/video.mp4',
     platform: 'unknown',

@@ -48,6 +48,8 @@ export class YtDlpExtractorService {
     if (isTikTok) referer = 'https://www.tiktok.com/';
     if (isYouTube) referer = 'https://www.youtube.com/';
     if (lowerUrl.includes('facebook') || lowerUrl.includes('fb.watch') || lowerUrl.includes('fb.com')) referer = 'https://www.facebook.com/';
+    if (lowerUrl.includes('instagram.com') || lowerUrl.includes('instagr.am')) referer = 'https://www.instagram.com/';
+    if (lowerUrl.includes('pinterest.com') || lowerUrl.includes('pin.it')) referer = 'https://www.pinterest.com/';
 
     const args = [
       '--dump-single-json',
@@ -55,6 +57,8 @@ export class YtDlpExtractorService {
       '--no-playlist',
       '--no-check-certificate',
       '--no-update',
+      '--socket-timeout', '8',
+      '--extractor-retries', '1',
       '--referer', referer,
     ];
 
@@ -179,13 +183,23 @@ export class YtDlpExtractorService {
         formatSelector = '18/b[height<=480]/best[height<=480]/best';
       }
     } else {
-      formatSelector = 'b/best';
+      formatSelector = 'best[ext=mp4]/b[ext=mp4]/best/b';
     }
+
+    let referer = 'https://www.google.com/';
+    if (lowerUrl.includes('tiktok')) referer = 'https://www.tiktok.com/';
+    if (lowerUrl.includes('facebook') || lowerUrl.includes('fb.watch') || lowerUrl.includes('fb.com')) referer = 'https://www.facebook.com/';
+    if (lowerUrl.includes('instagram.com') || lowerUrl.includes('instagr.am')) referer = 'https://www.instagram.com/';
+    if (lowerUrl.includes('pinterest.com') || lowerUrl.includes('pin.it')) referer = 'https://www.pinterest.com/';
+    if (isYouTube) referer = 'https://www.youtube.com/';
 
     const args = [
       '--no-playlist',
       '--no-check-certificate',
       '--no-warnings',
+      '--socket-timeout', '6',
+      '--extractor-retries', '1',
+      '--referer', referer,
       '-g',
       '-f', formatSelector,
     ];
@@ -228,10 +242,14 @@ export class YtDlpExtractorService {
     const isYouTube = lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be');
     const isTikTok = lowerUrl.includes('tiktok');
     const isFacebook = lowerUrl.includes('facebook') || lowerUrl.includes('fb.watch') || lowerUrl.includes('fb.com');
+    const isInstagram = lowerUrl.includes('instagram.com') || lowerUrl.includes('instagr.am');
+    const isPinterest = lowerUrl.includes('pinterest.com') || lowerUrl.includes('pin.it');
 
     let referer = 'https://www.google.com/';
     if (isTikTok) referer = 'https://www.tiktok.com/';
     if (isFacebook) referer = 'https://www.facebook.com/';
+    if (isInstagram) referer = 'https://www.instagram.com/';
+    if (isPinterest) referer = 'https://www.pinterest.com/';
     if (isYouTube) referer = 'https://www.youtube.com/';
 
     // Progressive format selector for stdout streaming (prevents ffmpeg stdout freeze)
@@ -241,13 +259,15 @@ export class YtDlpExtractorService {
     } else if (isYouTube) {
       formatString = '18/b/best';
     } else {
-      formatString = 'b/best';
+      formatString = 'best[ext=mp4]/b[ext=mp4]/best/b';
     }
 
     const args: string[] = [
       '--no-playlist',
       '--no-check-certificate',
       '--no-warnings',
+      '--socket-timeout', '8',
+      '--extractor-retries', '1',
       '--referer', referer,
       '-f', formatString,
       '-o', '-',

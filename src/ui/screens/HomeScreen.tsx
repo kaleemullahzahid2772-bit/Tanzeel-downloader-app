@@ -6,7 +6,7 @@ import { platformDetectorService } from '../../services/PlatformDetectorService'
 import { networkStatusService } from '../../services/network/NetworkStatusService';
 import { TaskState } from '../../domain/models/TaskState';
 import { PlatformType } from '../../domain/models/PlatformType';
-import { YoutubeIcon, TiktokIcon, InstagramIcon, FacebookIcon } from '../components/common/BrandIcons';
+import { YoutubeIcon, TiktokIcon, InstagramIcon, FacebookIcon, PinterestIcon } from '../components/common/BrandIcons';
 import { PwaInstallBanner } from '../components/common/PwaInstallBanner';
 import type { TabType } from '../components/navigation/BottomNavigationBar';
 
@@ -173,6 +173,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onNavigateTab: _onNaviga
     }
     if (detectedPlatform === PlatformType.FACEBOOK) {
       return <FacebookIcon className="w-5 h-5 text-blue-600 shrink-0" />;
+    }
+    if (detectedPlatform === PlatformType.PINTEREST) {
+      return <PinterestIcon className="w-5 h-5 text-rose-600 shrink-0" />;
     }
     return <LinkIcon className="w-5 h-5 text-emerald-700 shrink-0" />;
   };

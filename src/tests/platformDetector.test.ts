@@ -120,7 +120,27 @@ describe('Phase 2 - URL Validator, Normalizer, and Platform Detector', () => {
     });
   });
 
-  // 5. Invalid / Edge Cases Tests
+  // 5. Pinterest Tests
+  describe('Pinterest Detection & Video ID Extraction', () => {
+    it('detects standard Pinterest pin URL', async () => {
+      const url = 'https://www.pinterest.com/pin/123456789012345678/';
+      const result = await videoSourceAnalyzerService.analyze(url);
+      expect(result.isValid).toBe(true);
+      expect(result.platform).toBe(PlatformType.PINTEREST);
+      expect(result.platformName).toBe('Pinterest');
+      expect(result.videoId).toBe('123456789012345678');
+    });
+
+    it('detects pin.it short URL', async () => {
+      const url = 'https://pin.it/abcd123';
+      const result = await videoSourceAnalyzerService.analyze(url);
+      expect(result.isValid).toBe(true);
+      expect(result.platform).toBe(PlatformType.PINTEREST);
+      expect(result.platformName).toBe('Pinterest');
+    });
+  });
+
+  // 6. Invalid / Edge Cases Tests
   describe('Invalid Inputs & Edge Cases', () => {
     it('handles empty string', async () => {
       const result = await videoSourceAnalyzerService.analyze('');

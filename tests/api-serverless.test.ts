@@ -68,7 +68,30 @@ describe('Serverless API Handlers', () => {
     const parsed = JSON.parse(body);
     expect(parsed.success).toBe(true);
     expect(parsed.platform).toBe('tiktok');
-  });
+  }, 15000);
+
+  it('analyzeHandler handles Pinterest URL', async () => {
+    let statusCode = 0;
+    let headers: Record<string, string> = {};
+    let body = '';
+
+    const req = {
+      method: 'POST',
+      body: JSON.stringify({ url: 'https://www.pinterest.com/pin/123456789' }),
+    };
+    const res = {
+      setHeader(k: string, v: string) { headers[k] = v; },
+      set statusCode(c: number) { statusCode = c; },
+      get statusCode() { return statusCode; },
+      end(data: string) { body = data; },
+    };
+
+    await analyzeHandler(req as any, res as any);
+    expect(statusCode).toBe(200);
+    const parsed = JSON.parse(body);
+    expect(parsed.success).toBe(true);
+    expect(parsed.platform).toBe('pinterest');
+  }, 15000);
 
   it('extractMediaMetadata extracts YouTube info with formats', async () => {
     const meta = await extractMediaMetadata('https://youtu.be/dQw4w9WgXcQ');

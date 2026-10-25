@@ -142,6 +142,162 @@ export class RealMediaExtractorService {
       };
     }
 
+    // 3. Pinterest Fast Direct Extraction (v.pinimg.com direct MP4 / HLS)
+    if (platform === 'pinterest' || trimmed.includes('pinterest.com') || trimmed.includes('pin.it')) {
+      try {
+        let pinUrl = trimmed;
+        if (trimmed.includes('pin.it')) {
+          const redirectRes = await axios.get(trimmed, {
+            maxRedirects: 5,
+            timeout: 4000,
+            httpsAgent: insecureHttpsAgent,
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            },
+          }).catch(() => null);
+          if (redirectRes?.request?.res?.responseUrl) {
+            pinUrl = redirectRes.request.res.responseUrl;
+          }
+        }
+
+        const pinPageRes = await axios.get(pinUrl, {
+          timeout: 4000,
+          httpsAgent: insecureHttpsAgent,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+          },
+        }).catch(() => null);
+
+        if (pinPageRes?.data) {
+          const html = typeof pinPageRes.data === 'string' ? pinPageRes.data : JSON.stringify(pinPageRes.data);
+          const $ = cheerio.load(html);
+          const title = $('meta[property="og:title"]').attr('content') || $('title').text() || 'Pinterest Video';
+          const author = $('meta[name="author"]').attr('content') || $('meta[property="og:site_name"]').attr('content') || 'Pinterest Creator';
+          const thumb = $('meta[property="og:image"]').attr('content') || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80';
+
+          let directUrl: string | undefined;
+          const mp4Match = html.match(/https?:\\?\/\\?\/v[1-9]?\.pinimg\.com\\?\/videos\\?\/[^"'\s<>]+\.mp4/i) ||
+                           html.match(/https:\/\/v[1-9]?\.pinimg\.com\/videos\/[^"'\s<>]+\.mp4/i);
+          if (mp4Match) {
+            directUrl = mp4Match[0].replace(/\\/g, '');
+          } else {
+            const hlsMatch = html.match(/https?:\\?\/\\?\/v[1-9]?\.pinimg\.com\\?\/videos\\?\/mc\\?\/hls\\?\/([^"'\s<>]+)\.m3u8/i);
+            if (hlsMatch) {
+              const cleanPath = hlsMatch[1].replace(/\\/g, '');
+              directUrl = `https://v1.pinimg.com/videos/mc/720p/${cleanPath}.mp4`;
+            }
+          }
+
+          return {
+            title: title.trim(),
+            author: author.trim(),
+            thumbnailUrl: thumb.trim(),
+            directMediaUrl: directUrl,
+            platformName: 'Pinterest',
+          };
+        }
+      } catch {
+        // Fallback
+      }
+
+      return {
+        title: 'Pinterest Video',
+        author: 'Pinterest Creator',
+        thumbnailUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80',
+        platformName: 'Pinterest',
+      };
+    }
+
+    // 4. Facebook Fast Direct Extraction
+    if (platform === 'facebook' || trimmed.includes('facebook.com') || trimmed.includes('fb.watch') || trimmed.includes('fb.com')) {
+      try {
+        const fbRes = await axios.get(trimmed, {
+          timeout: 4000,
+          httpsAgent: insecureHttpsAgent,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.9',
+          },
+        }).catch(() => null);
+
+        if (fbRes?.data) {
+          const html = typeof fbRes.data === 'string' ? fbRes.data : JSON.stringify(fbRes.data);
+          const unescaped = html.replace(/\\u0026/g, '&').replace(/\\u002F/g, '/').replace(/\\/g, '');
+          const hdMatch = unescaped.match(/"browser_native_hd_url":"([^"]+)"/i) ||
+                          unescaped.match(/"playable_url_quality_hd":"([^"]+)"/i) ||
+                          unescaped.match(/hd_src:"([^"]+)"/i) ||
+                          unescaped.match(/"hd_src_no_ratelimit":"([^"]+)"/i);
+
+          const sdMatch = unescaped.match(/"browser_native_sd_url":"([^"]+)"/i) ||
+                          unescaped.match(/"playable_url":"([^"]+)"/i) ||
+                          unescaped.match(/sd_src:"([^"]+)"/i) ||
+                          unescaped.match(/"sd_src_no_ratelimit":"([^"]+)"/i);
+
+          const directUrl = hdMatch?.[1] || sdMatch?.[1];
+          const $ = cheerio.load(html);
+          const title = $('meta[property="og:title"]').attr('content') || $('title').text() || 'Facebook Watch Video';
+          const thumb = $('meta[property="og:image"]').attr('content') || 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=600&auto=format&fit=crop&q=80';
+
+          return {
+            title: title.trim(),
+            author: 'Facebook Page',
+            thumbnailUrl: thumb.trim(),
+            directMediaUrl: directUrl,
+            platformName: 'Facebook',
+          };
+        }
+      } catch {
+        // Fallback
+      }
+    }
+
+    // 5. Instagram Fast Direct Extraction
+    if (platform === 'instagram' || trimmed.includes('instagram.com') || trimmed.includes('instagr.am')) {
+      try {
+        const shortcodeMatch = trimmed.match(/\/(?:p|reel|reels|tv)\/([A-Za-z0-9_-]+)/);
+        const shortcode = shortcodeMatch ? shortcodeMatch[1] : '';
+
+        if (shortcode) {
+          const embedRes = await axios.get(`https://www.instagram.com/p/${shortcode}/embed/captioned/`, {
+            timeout: 4000,
+            httpsAgent: insecureHttpsAgent,
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+              'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+              'Accept-Language': 'en-US,en;q=0.9',
+            },
+          }).catch(() => null);
+
+          if (embedRes?.data) {
+            const html = typeof embedRes.data === 'string' ? embedRes.data : JSON.stringify(embedRes.data);
+            const videoUrlMatch = html.match(/"video_url":"([^"]+)"/) || html.match(/video_url\\":\\"([^"]+)\\"/);
+            let directUrl = videoUrlMatch ? videoUrlMatch[1].replace(/\\u0026/g, '&').replace(/\\u002F/g, '/').replace(/\\/g, '') : undefined;
+
+            if (!directUrl) {
+              const cdnMatch = html.match(/https?:[^"'\s<>]+\.mp4[^"'\s<>]*/i);
+              if (cdnMatch) directUrl = cdnMatch[0].replace(/\\u0026/g, '&').replace(/\\u002F/g, '/').replace(/\\/g, '');
+            }
+
+            const $ = cheerio.load(html);
+            const title = $('meta[property="og:title"]').attr('content') || 'Instagram Reel';
+            const thumb = $('meta[property="og:image"]').attr('content') || 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=600&auto=format&fit=crop&q=80';
+
+            return {
+              title: title.trim(),
+              author: '@instagramuser',
+              thumbnailUrl: thumb.trim(),
+              directMediaUrl: directUrl,
+              platformName: 'Instagram',
+            };
+          }
+        }
+      } catch {
+        // Fallback
+      }
+    }
+
     // 3. Facebook, Instagram & Web Video Extraction via Cheerio & Regex
     try {
       const extracted = await this.extractOgAndDirectMedia(trimmed);
@@ -264,6 +420,8 @@ export class RealMediaExtractorService {
           referer = 'https://www.facebook.com/';
         } else if (remoteMediaUrl.includes('instagram.com') || remoteMediaUrl.includes('cdninstagram.com')) {
           referer = 'https://www.instagram.com/';
+        } else if (remoteMediaUrl.includes('pinterest.com') || remoteMediaUrl.includes('pinimg.com')) {
+          referer = 'https://www.pinterest.com/';
         }
         const client = remoteMediaUrl.startsWith('https') ? https : http;
         const req = client.get(

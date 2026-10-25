@@ -5,6 +5,7 @@ import { YouTubeAdapter } from '../adapters/YouTubeAdapter';
 import { TikTokAdapter } from '../adapters/TikTokAdapter';
 import { FacebookAdapter } from '../adapters/FacebookAdapter';
 import { InstagramAdapter } from '../adapters/InstagramAdapter';
+import { PinterestAdapter } from '../adapters/PinterestAdapter';
 import { GenericWebAdapter } from '../adapters/GenericWebAdapter';
 import { ssrfProtectionService } from './security/SsrfProtectionService';
 
@@ -17,6 +18,7 @@ export class MediaExtractorService implements IMediaExtractor {
       new TikTokAdapter(),
       new FacebookAdapter(),
       new InstagramAdapter(),
+      new PinterestAdapter(),
       new GenericWebAdapter(), // Fallback for any generic web video URL
     ];
   }

@@ -13,7 +13,7 @@ export interface MediaFormat {
 export interface MediaMetadata {
   url: string;
   normalizedUrl: string;
-  platform: 'youtube' | 'tiktok' | 'facebook' | 'instagram' | 'unknown';
+  platform: 'youtube' | 'tiktok' | 'facebook' | 'instagram' | 'pinterest' | 'unknown';
   platformName: string;
   title: string;
   author: string;

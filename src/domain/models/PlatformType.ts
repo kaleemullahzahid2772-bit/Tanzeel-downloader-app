@@ -3,6 +3,7 @@ export const PlatformType = {
   TIKTOK: 'TIKTOK',
   FACEBOOK: 'FACEBOOK',
   INSTAGRAM: 'INSTAGRAM',
+  PINTEREST: 'PINTEREST',
   UNKNOWN: 'UNKNOWN',
 } as const;
 
@@ -13,5 +14,6 @@ export const PLATFORM_DISPLAY_NAMES: Record<PlatformType, string> = {
   [PlatformType.TIKTOK]: 'TikTok',
   [PlatformType.FACEBOOK]: 'Facebook',
   [PlatformType.INSTAGRAM]: 'Instagram',
+  [PlatformType.PINTEREST]: 'Pinterest',
   [PlatformType.UNKNOWN]: 'Unknown',
 };

@@ -16,12 +16,48 @@ export class FacebookAdapter implements IPlatformAdapter {
       throw new Error('URL is not a valid Facebook video link.');
     }
 
-    // 1. Try real yt-dlp binary extraction
+    // 1. Fast direct HTML / OpenGraph extraction (instantaneous, no child process)
+    const realMeta = await realMediaExtractorService.fetchRealMetadata(url, 'facebook');
+    if (realMeta && realMeta.directMediaUrl) {
+      return {
+        url,
+        normalizedUrl: url,
+        platform: 'facebook',
+        platformName: 'Facebook',
+        title: realMeta.title || 'Facebook Watch Video',
+        author: realMeta.author || 'Facebook Page',
+        thumbnailUrl: realMeta.thumbnailUrl || 'https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=600&auto=format&fit=crop&q=80',
+        durationSeconds: 120,
+        durationFormatted: '02:00',
+        formats: [
+          {
+            formatId: '720p',
+            resolution: '720p',
+            container: 'mp4',
+            qualityLabel: '720p HD (MP4)',
+            estimatedSizeBytes: 15 * 1024 * 1024,
+            estimatedSizeFormatted: '15.0 MB',
+            isAudioOnly: false,
+            url: realMeta.directMediaUrl,
+          },
+          {
+            formatId: 'audio',
+            resolution: 'Audio',
+            container: 'mp3',
+            qualityLabel: 'Original Audio (MP3)',
+            estimatedSizeBytes: 3 * 1024 * 1024,
+            estimatedSizeFormatted: '3.0 MB',
+            isAudioOnly: true,
+            url: realMeta.directMediaUrl,
+          },
+        ],
+        analyzedAt: new Date().toISOString(),
+      };
+    }
+
+    // 2. Try real yt-dlp binary extraction
     const ytDlpMeta = await ytDlpExtractorService.analyzeUrl(url, 'facebook');
     if (ytDlpMeta) return ytDlpMeta;
-
-    // 2. Fallback to OpenGraph / Cheerio extraction
-    const realMeta = await realMediaExtractorService.fetchRealMetadata(url, 'facebook');
 
     return {
       url,
@@ -94,13 +130,23 @@ export class FacebookAdapter implements IPlatformAdapter {
       // Fallback
     }
 
-    // 3. Fallback to real yt-dlp binary stream output (bulletproof backup)
+    // 3. Fast direct stdout progressive streaming (real-time chunking, no disk delay)
+    try {
+      const stdoutStream = await ytDlpExtractorService.createStdoutMediaStream(url, title, formatId);
+      if (stdoutStream && stdoutStream.stream) {
+        return stdoutStream;
+      }
+    } catch {
+      // Fallback
+    }
+
+    // 4. Fallback to real yt-dlp binary stream output (bulletproof backup)
     const ytDlpStream = await ytDlpExtractorService.createMediaStream(url, title, formatId);
     if (ytDlpStream && ytDlpStream.stream) {
       return ytDlpStream;
     }
 
-    // 4. Secondary fallback via extractMetadata if needed
+    // 5. Secondary fallback via extractMetadata if needed
     const meta = await this.extractMetadata(url).catch(() => null);
     if (meta) {
       const safeTitle = (title || meta.title || 'facebook_video').replace(/[^a-zA-Z0-9_]/g, '_');

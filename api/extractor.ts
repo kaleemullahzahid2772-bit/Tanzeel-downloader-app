@@ -101,6 +101,7 @@ export function detectPlatform(url: string): { platform: string; platformName: s
   if (lower.includes('tiktok.com') || lower.includes('vt.tiktok') || lower.includes('vm.tiktok')) return { platform: 'tiktok', platformName: 'TikTok' };
   if (lower.includes('facebook.com') || lower.includes('fb.watch') || lower.includes('fb.com')) return { platform: 'facebook', platformName: 'Facebook' };
   if (lower.includes('instagram.com') || lower.includes('instagr.am')) return { platform: 'instagram', platformName: 'Instagram' };
+  if (lower.includes('pinterest.com') || lower.includes('pin.it')) return { platform: 'pinterest', platformName: 'Pinterest' };
   if (lower.includes('twitter.com') || lower.includes('x.com')) return { platform: 'twitter', platformName: 'X (Twitter)' };
   return { platform: 'generic', platformName: 'Web Video' };
 }
@@ -155,13 +156,16 @@ export async function extractHtmlAndOg(url: string): Promise<{ title?: string; a
       html.match(/property="og:video:secure_url"\s+content="([^"]+)"/i)?.[1] ||
       html.match(/property="og:video"\s+content="([^"]+)"/i)?.[1] ||
       html.match(/name="twitter:player:stream"\s+content="([^"]+)"/i)?.[1] ||
+      html.match(/https?:\\?\/\\?\/v[1-9]?\.pinimg\.com\\?\/videos\\?\/[^"'\s<>]+\.mp4/i)?.[0] ||
+      html.match(/https:\/\/v[1-9]?\.pinimg\.com\/videos\/[^"'\s<>]+\.mp4/i)?.[0] ||
       html.match(/hd_src:"([^"]+)"/i)?.[1] ||
       html.match(/sd_src:"([^"]+)"/i)?.[1] ||
-      html.match(/browser_native_hd_url":"([^"]+)"/i)?.[1] ||
-      html.match(/browser_native_sd_url":"([^"]+)"/i)?.[1] ||
-      html.match(/playable_url_quality_hd":"([^"]+)"/i)?.[1] ||
-      html.match(/playable_url":"([^"]+)"/i)?.[1] ||
-      html.match(/video_url":"([^"]+)"/i)?.[1] ||
+      html.match(/"browser_native_hd_url":"([^"]+)"/i)?.[1] ||
+      html.match(/"browser_native_sd_url":"([^"]+)"/i)?.[1] ||
+      html.match(/"playable_url_quality_hd":"([^"]+)"/i)?.[1] ||
+      html.match(/"playable_url":"([^"]+)"/i)?.[1] ||
+      html.match(/"video_url":"([^"]+)"/i)?.[1] ||
+      html.match(/video_url:"([^"]+)"/i)?.[1] ||
       html.match(/"playAddr":"([^"]+)"/i)?.[1];
 
     let directMediaUrl = directVideoMatch ? directVideoMatch.replace(/\\/g, '') : undefined;
@@ -454,7 +458,75 @@ export async function extractMediaMetadata(rawUrl: string): Promise<ExtractedMed
     };
   }
 
-  // 3. Facebook, Instagram, Twitter & Generic
+  // 3. Pinterest Fast Direct Extraction
+  if (platform === 'pinterest' || lowerUrl.includes('pinterest.com') || lowerUrl.includes('pin.it')) {
+    try {
+      let pinUrl = url;
+      if (lowerUrl.includes('pin.it')) {
+        const redir = await axios.get(url, { maxRedirects: 5, timeout: 3500, httpsAgent: insecureHttpsAgent }).catch(() => null);
+        if (redir?.request?.res?.responseUrl) pinUrl = redir.request.res.responseUrl;
+      }
+      const pageRes = await axios.get(pinUrl, {
+        timeout: 3500,
+        httpsAgent: insecureHttpsAgent,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        },
+      }).catch(() => null);
+
+      if (pageRes?.data) {
+        const html = typeof pageRes.data === 'string' ? pageRes.data : JSON.stringify(pageRes.data);
+        const mp4Match = html.match(/https?:\\?\/\\?\/v[1-9]?\.pinimg\.com\\?\/videos\\?\/[^"'\s<>]+\.mp4/i) || html.match(/https:\/\/v[1-9]?\.pinimg\.com\/videos\/[^"'\s<>]+\.mp4/i);
+        let directUrl = mp4Match ? mp4Match[0].replace(/\\/g, '') : undefined;
+        if (!directUrl) {
+          const hlsMatch = html.match(/https?:\\?\/\\?\/v[1-9]?\.pinimg\.com\\?\/videos\\?\/mc\\?\/hls\\?\/([^"'\s<>]+)\.m3u8/i);
+          if (hlsMatch) {
+            directUrl = `https://v1.pinimg.com/videos/mc/720p/${hlsMatch[1].replace(/\\/g, '')}.mp4`;
+          }
+        }
+        const titleMatch = html.match(/property="og:title"\s+content="([^"]+)"/i) || html.match(/<title>([^<]+)<\/title>/i);
+        const imgMatch = html.match(/property="og:image"\s+content="([^"]+)"/i);
+
+        return {
+          originalUrl: url,
+          normalizedUrl: url,
+          platform: 'pinterest',
+          platformName: 'Pinterest',
+          title: titleMatch ? titleMatch[1].trim() : 'Pinterest Video',
+          author: 'Pinterest Creator',
+          thumbnailUrl: imgMatch ? imgMatch[1].trim() : 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=600&auto=format&fit=crop&q=80',
+          durationSeconds: 45,
+          durationFormatted: '00:45',
+          formats: [
+            {
+              formatId: '720p',
+              resolution: '720p',
+              container: 'mp4',
+              qualityLabel: '720p HD (MP4)',
+              estimatedSizeBytes: 10 * 1024 * 1024,
+              estimatedSizeFormatted: '10.0 MB',
+              isAudioOnly: false,
+              url: directUrl,
+            },
+            {
+              formatId: 'audio-mp3',
+              resolution: 'Audio',
+              container: 'mp3',
+              qualityLabel: 'Original Audio (MP3)',
+              estimatedSizeBytes: 2 * 1024 * 1024,
+              estimatedSizeFormatted: '2.0 MB',
+              isAudioOnly: true,
+              url: directUrl,
+            },
+          ],
+        };
+      }
+    } catch {
+      // Fallback
+    }
+  }
+
+  // 4. Facebook, Instagram, Twitter & Generic
   const ogData = await extractHtmlAndOg(url);
   const defaultThumbnail =
     platform === 'facebook'
@@ -568,7 +640,15 @@ export function createRemoteStream(remoteUrl: string): Promise<{ stream: Readabl
   return new Promise((resolve) => {
     try {
       const isTikTok = remoteUrl.includes('tiktok') || remoteUrl.includes('tikwm');
-      const referer = isTikTok ? 'https://www.tiktok.com/' : remoteUrl;
+      const isPinterest = remoteUrl.includes('pinterest') || remoteUrl.includes('pinimg');
+      const isFacebook = remoteUrl.includes('facebook') || remoteUrl.includes('fbcdn');
+      const isInstagram = remoteUrl.includes('instagram') || remoteUrl.includes('cdninstagram');
+
+      let referer = remoteUrl;
+      if (isTikTok) referer = 'https://www.tiktok.com/';
+      else if (isPinterest) referer = 'https://www.pinterest.com/';
+      else if (isFacebook) referer = 'https://www.facebook.com/';
+      else if (isInstagram) referer = 'https://www.instagram.com/';
       const client = remoteUrl.startsWith('https') ? https : http;
       const req = client.get(
         remoteUrl,

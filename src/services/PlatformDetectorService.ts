@@ -48,6 +48,17 @@ export const PLATFORMS_CONFIG: Record<SupportedPlatform, PlatformDetails> = {
     exampleUrl: 'https://instagram.com/reel/...',
     supportedQualities: ['1080p HD', '720p'],
   },
+  pinterest: {
+    id: 'pinterest',
+    name: 'Pinterest',
+    tagline: 'Pins & Videos',
+    iconName: 'Pin',
+    badgeBg: 'bg-rose-500/10 border-rose-500/30 text-rose-500',
+    badgeTextColor: 'text-rose-500',
+    accentColor: '#E60023',
+    exampleUrl: 'https://pinterest.com/pin/...',
+    supportedQualities: ['720p HD', 'Original', 'MP3'],
+  },
   unknown: {
     id: 'unknown',
     name: 'Web Link',
@@ -77,6 +88,9 @@ export class PlatformDetectorService implements IPlatformDetector {
     if (trimmed.includes('instagram.com') || trimmed.includes('instagr.am')) {
       return PlatformType.INSTAGRAM;
     }
+    if (trimmed.includes('pinterest.com') || trimmed.includes('pin.it')) {
+      return PlatformType.PINTEREST;
+    }
 
     return PlatformType.UNKNOWN;
   }
@@ -92,6 +106,8 @@ export class PlatformDetectorService implements IPlatformDetector {
         return 'facebook';
       case PlatformType.INSTAGRAM:
         return 'instagram';
+      case PlatformType.PINTEREST:
+        return 'pinterest';
       default:
         return 'unknown';
     }

@@ -52,20 +52,30 @@ export class GenericWebAdapter implements IPlatformAdapter {
   }
 
   public async createMediaStream(url: string, formatId?: string, title?: string): Promise<StreamMediaResult> {
-    // 1. Try real yt-dlp binary stream output directly (fast)
+    // 1. Fast direct stdout progressive streaming (no disk delay)
+    try {
+      const stdoutStream = await ytDlpExtractorService.createStdoutMediaStream(url, title, formatId);
+      if (stdoutStream && stdoutStream.stream) {
+        return stdoutStream;
+      }
+    } catch {
+      // Fallback
+    }
+
+    // 2. Try real yt-dlp binary stream output directly (fallback)
     const ytDlpStream = await ytDlpExtractorService.createMediaStream(url, title, formatId);
     if (ytDlpStream && ytDlpStream.stream) {
       return ytDlpStream;
     }
 
-    // 2. Direct HTML extracted media URL stream
+    // 3. Direct HTML extracted media URL stream
     const meta = await this.extractMetadata(url).catch(() => null);
     const isAudio = formatId?.toLowerCase() === 'mp3' || formatId?.toLowerCase() === 'audio';
     const safeTitle = (title || meta?.title || 'web_video').replace(/[^a-zA-Z0-9_]/g, '_');
     const filename = `${safeTitle}.${isAudio ? 'mp3' : 'mp4'}`;
 
     const directUrl = meta?.formats[0]?.url || url;
-    if (directUrl && (directUrl.endsWith('.mp4') || directUrl.endsWith('.webm') || directUrl.includes('googlevideo.com') || directUrl.includes('fbcdn.net') || directUrl.includes('cdninstagram.com'))) {
+    if (directUrl && (directUrl.endsWith('.mp4') || directUrl.endsWith('.webm') || directUrl.includes('googlevideo.com') || directUrl.includes('fbcdn.net') || directUrl.includes('cdninstagram.com') || directUrl.includes('pinimg.com'))) {
       const realStream = await realMediaExtractorService.createRealStreamFromUrl(directUrl);
       if (realStream) {
         return {
