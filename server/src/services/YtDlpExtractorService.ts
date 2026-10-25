@@ -59,7 +59,8 @@ export class YtDlpExtractorService {
     ];
 
     if (isYouTube) {
-      args.push('--extractor-args', 'youtube:player_client=android,ios,web');
+      args.push('--js-runtimes', 'node');
+      args.push('--extractor-args', 'youtube:player-client=tv_samsung,web_embedded,ios,mweb');
     } else {
       args.push('--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
     }
@@ -190,7 +191,8 @@ export class YtDlpExtractorService {
     ];
 
     if (isYouTube) {
-      args.push('--extractor-args', 'youtube:player_client=android,ios,web');
+      args.push('--js-runtimes', 'node');
+      args.push('--extractor-args', 'youtube:player-client=tv_samsung,web_embedded,ios,mweb');
     } else {
       args.push('--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
     }
@@ -201,7 +203,7 @@ export class YtDlpExtractorService {
       execFile(
         this.ytDlpPath,
         args,
-        { timeout: 15000 },
+        { timeout: 25000 },
         (err, stdout) => {
           if (err || !stdout) {
             return resolve(null);
@@ -237,15 +239,7 @@ export class YtDlpExtractorService {
     if (isAudio) {
       formatString = isYouTube ? '140/ba/b' : 'ba/b';
     } else if (isYouTube) {
-      if (quality === '1080p') {
-        formatString = '22/18/b[height<=1080]/best[height<=1080]/best';
-      } else if (quality === '720p') {
-        formatString = '22/18/b[height<=720]/best[height<=720]/best';
-      } else if (quality === '480p') {
-        formatString = '18/b[height<=480]/best[height<=480]/best';
-      } else {
-        formatString = '22/18/b[height<=720]/best[height<=720]/best';
-      }
+      formatString = '18/b/best';
     } else {
       formatString = 'b/best';
     }
@@ -260,7 +254,8 @@ export class YtDlpExtractorService {
     ];
 
     if (isYouTube) {
-      args.push('--extractor-args', 'youtube:player_client=android,ios,web');
+      args.push('--js-runtimes', 'node');
+      args.push('--extractor-args', 'youtube:player-client=tv_samsung,web_embedded,ios,mweb');
     } else {
       args.push('--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36');
     }
@@ -277,7 +272,7 @@ export class YtDlpExtractorService {
           try { child.kill('SIGKILL'); } catch {}
           resolve(null);
         }
-      }, 25000);
+      }, 35000);
 
       child.stdout.once('data', (firstChunk) => {
         if (!resolved) {
@@ -342,24 +337,26 @@ export class YtDlpExtractorService {
     if (isFacebook) referer = 'https://www.facebook.com/';
     if (isYouTube) referer = 'https://www.youtube.com/';
 
-    const ffmpegBinary = ffmpegInstaller?.path && fs.existsSync(ffmpegInstaller.path) ? ffmpegInstaller.path : null;
+    let ffmpegBinary = ffmpegInstaller?.path && fs.existsSync(ffmpegInstaller.path) ? ffmpegInstaller.path : null;
+    if (!ffmpegBinary && fs.existsSync('/usr/bin/ffmpeg')) {
+      ffmpegBinary = '/usr/bin/ffmpeg';
+    }
 
     // Quality format selection
     let formatString = 'bv*[height<=720][ext=mp4]+ba[ext=m4a]/b[height<=720][ext=mp4]/bv*[height<=720]+ba/best[height<=720]/best';
     if (isAudio) {
       formatString = isYouTube ? '140/ba/b' : 'ba/b';
     } else if (isYouTube) {
-      // Prioritize progressive streams that download smoothly without SABR freeze
       if (quality === '1080p') {
-        formatString = '22/18/b[height<=1080]/best[height<=1080]/best';
+        formatString = 'bv*[height<=1080][ext=mp4]+ba[ext=m4a]/bv*[height<=1080]+ba/b[height<=1080]/18/best';
       } else if (quality === '720p') {
-        formatString = '22/18/b[height<=720]/best[height<=720]/best';
+        formatString = 'bv*[height<=720][ext=mp4]+ba[ext=m4a]/bv*[height<=720]+ba/b[height<=720]/18/best';
       } else if (quality === '480p') {
-        formatString = '18/b[height<=480]/best[height<=480]/best';
+        formatString = 'bv*[height<=480][ext=mp4]+ba[ext=m4a]/bv*[height<=480]+ba/b[height<=480]/18/best';
       } else if (quality === '360p') {
-        formatString = '18/b[height<=360]/best[height<=360]/best';
+        formatString = '18/bv*[height<=360]+ba/b[height<=360]/best';
       } else {
-        formatString = '22/18/b[height<=720]/best[height<=720]/best';
+        formatString = 'bv*[height<=720][ext=mp4]+ba[ext=m4a]/bv*[height<=720]+ba/b[height<=720]/18/best';
       }
     } else if (isTikTok) {
       // Prioritize H.264 (AVC) codec for TikTok so that all media players (Windows, Android, VLC) can play the video
@@ -399,7 +396,8 @@ export class YtDlpExtractorService {
     ];
 
     if (isYouTube) {
-      args.push('--extractor-args', 'youtube:player_client=android,ios,web');
+      args.push('--js-runtimes', 'node');
+      args.push('--extractor-args', 'youtube:player-client=tv_samsung,web_embedded,ios,mweb');
     } else {
       args.push('--user-agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
     }

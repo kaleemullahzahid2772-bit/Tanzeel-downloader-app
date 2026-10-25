@@ -300,7 +300,7 @@ export class RealMediaExtractorService {
         );
 
         req.on('error', () => resolve(null));
-        req.setTimeout(6000, () => {
+        req.setTimeout(12000, () => {
           req.destroy();
           resolve(null);
         });

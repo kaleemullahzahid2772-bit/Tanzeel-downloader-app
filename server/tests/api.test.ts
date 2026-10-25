@@ -9,7 +9,7 @@ describe('Phase 3 - Backend API & Media Extractor Integration Tests', () => {
       expect(meta.platform).toBe('youtube');
       expect(meta.title).toBeTruthy();
       expect(meta.formats.length).toBeGreaterThan(0);
-    }, 15000);
+    }, 30000);
 
     it('analyzes TikTok URL correctly', async () => {
       const meta = await mediaExtractorService.analyzeUrl('https://www.tiktok.com/@user/video/123456');
