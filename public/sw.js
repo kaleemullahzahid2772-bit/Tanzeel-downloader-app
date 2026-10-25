@@ -46,6 +46,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Only handle http and https schemes (ignore chrome-extension://, data:, etc.)
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    return;
+  }
+
   // 2. CRITICAL: Strictly bypass cache for API routes, backend services, and streaming downloads
   if (
     url.pathname.startsWith('/api/') ||
