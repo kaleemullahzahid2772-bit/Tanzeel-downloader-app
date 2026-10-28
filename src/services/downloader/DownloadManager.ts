@@ -147,18 +147,21 @@ export class DownloadManager {
       );
 
       if (downloadedBlob && typeof window !== 'undefined' && typeof document !== 'undefined') {
-        if (!downloadedBlob.size || downloadedBlob.size < 1000) {
-          throw new Error('Downloaded file is incomplete or corrupted (0 bytes received).');
+        const isNativeHandled = downloadedBlob.size === 'browser-download-initiated'.length;
+        if (!isNativeHandled) {
+          if (!downloadedBlob.size || downloadedBlob.size < 1000) {
+            throw new Error('Downloaded file is incomplete or corrupted (0 bytes received).');
+          }
+          const blobUrl = URL.createObjectURL(downloadedBlob);
+          const anchor = document.createElement('a');
+          anchor.href = blobUrl;
+          anchor.download = filename;
+          anchor.style.display = 'none';
+          document.body.appendChild(anchor);
+          anchor.click();
+          document.body.removeChild(anchor);
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 20000);
         }
-        const blobUrl = URL.createObjectURL(downloadedBlob);
-        const anchor = document.createElement('a');
-        anchor.href = blobUrl;
-        anchor.download = filename;
-        anchor.style.display = 'none';
-        document.body.appendChild(anchor);
-        anchor.click();
-        document.body.removeChild(anchor);
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 20000);
       }
 
       task.progressPercent = 100;

@@ -71,11 +71,20 @@ export class YouTubeAdapter implements IPlatformAdapter {
     const safeTitle = (title || 'youtube_video').replace(/[^a-zA-Z0-9_]/g, '_');
     const filename = `${safeTitle}.${isAudio ? 'mp3' : 'mp4'}`;
 
-    // 1. Direct fast streaming via yt-dlp extracted direct URL (2-3 seconds, ratebypass, no disk wait)
+    // 1. Direct fast streaming via yt-dlp extracted direct URLs (2-4 seconds, instant stream, no disk wait, long videos supported)
     try {
-      const directUrl = await ytDlpExtractorService.getDirectMediaUrl(url, isAudio, formatId);
-      if (directUrl) {
-        const realStream = await realMediaExtractorService.createRealStreamFromUrl(directUrl);
+      const urls = await ytDlpExtractorService.getDirectMediaUrls(url, isAudio, formatId);
+      if (urls && urls.length > 0) {
+        if (urls.length >= 2 && !isAudio) {
+          // Video + Audio DASH streams muxed on the fly to fMP4 in real time
+          const muxedStream = await ytDlpExtractorService.createFfmpegMuxStream(urls[0], urls[1], filename);
+          if (muxedStream && muxedStream.stream) {
+            return muxedStream;
+          }
+        }
+
+        // Single direct stream (e.g. audio or muxed single stream)
+        const realStream = await realMediaExtractorService.createRealStreamFromUrl(urls[0]);
         if (realStream && realStream.stream) {
           return {
             stream: realStream.stream,

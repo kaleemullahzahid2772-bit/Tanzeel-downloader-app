@@ -20,6 +20,10 @@ downloadRouter.all('/download', async (req: Request, res: Response, next: NextFu
       });
     }
 
+    // Disable request and response socket timeouts to support long video streaming (1 hour+)
+    req.setTimeout(0);
+    res.setTimeout(0);
+
     const mediaResult = await mediaExtractorService.downloadMedia(url, chosenQuality, title);
     const safeFilename = tempFileManager.sanitizeFilename(mediaResult.filename);
 
@@ -62,6 +66,12 @@ downloadRouter.all('/download', async (req: Request, res: Response, next: NextFu
     );
 
     mediaResult.stream.pipe(res);
+
+    res.on('close', () => {
+      if (mediaResult?.stream && typeof (mediaResult.stream as any).destroy === 'function') {
+        (mediaResult.stream as any).destroy();
+      }
+    });
 
     mediaResult.stream.on('error', (err) => {
       console.error('[StreamError]', err);

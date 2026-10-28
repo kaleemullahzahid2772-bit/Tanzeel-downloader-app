@@ -109,7 +109,8 @@ export class BackendApiClient implements IBackendApiClient {
     const format = isAudio ? 'mp3' : 'mp4';
 
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 180000);
+    // Allow up to 1 hour stream timeout for long videos (e.g. 1 hour video)
+    const timer = setTimeout(() => controller.abort(), 3600000);
 
     let res: Response;
     try {
@@ -157,6 +158,15 @@ export class BackendApiClient implements IBackendApiClient {
     const contentLengthHeader = res.headers.get('Content-Length');
     const totalBytes = contentLengthHeader ? parseInt(contentLengthHeader, 10) : 0;
 
+    // For large or long videos (over 80 MB): Trigger native browser stream download to prevent JS memory overflow
+    if (totalBytes > 80 * 1024 * 1024 && typeof window !== 'undefined') {
+      this.triggerBrowserDownload(url, quality, format);
+      if (onProgress) {
+        onProgress(totalBytes, totalBytes);
+      }
+      return new Blob(['browser-download-initiated'], { type: 'video/mp4' });
+    }
+
     let blob: Blob;
     if (res.body && onProgress) {
       const reader = res.body.getReader();
@@ -176,6 +186,13 @@ export class BackendApiClient implements IBackendApiClient {
           if (now - lastProgress > 200) {
             lastProgress = now;
             onProgress(receivedBytes, totalBytes);
+          }
+
+          // If stream exceeds 80 MB mid-stream (long video with chunked encoding), transition safely to native download
+          if (receivedBytes > 80 * 1024 * 1024 && typeof window !== 'undefined') {
+            try { await reader.cancel(); } catch {}
+            this.triggerBrowserDownload(url, quality, format);
+            return new Blob(['browser-download-initiated'], { type: 'video/mp4' });
           }
         }
       }
@@ -197,7 +214,28 @@ export class BackendApiClient implements IBackendApiClient {
   public getDownloadUrl(url: string, quality: string = '720p', format: 'mp4' | 'mp3' | 'webm' = 'mp4'): string {
     const q = quality.toLowerCase();
     const fmt = format.toLowerCase();
-    return `${this.baseUrl}/api/download?url=${encodeURIComponent(url)}&quality=${encodeURIComponent(q)}&format=${encodeURIComponent(fmt)}`;
+    return `${this.baseUrl || ''}/api/download?url=${encodeURIComponent(url)}&quality=${encodeURIComponent(q)}&format=${encodeURIComponent(fmt)}`;
+  }
+
+  public triggerBrowserDownload(
+    url: string,
+    quality: string = '720p',
+    format: 'mp4' | 'mp3' | 'webm' = 'mp4',
+    title?: string
+  ): void {
+    if (typeof window === 'undefined' || typeof document === 'undefined') return;
+    const downloadUrl = this.getDownloadUrl(url, quality, format) + (title ? `&title=${encodeURIComponent(title)}` : '');
+    const a = document.createElement('a');
+    a.href = downloadUrl;
+    a.setAttribute('download', '');
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => {
+      if (document.body.contains(a)) {
+        document.body.removeChild(a);
+      }
+    }, 15000);
   }
 
   public async downloadMediaStream(

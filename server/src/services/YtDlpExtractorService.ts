@@ -27,6 +27,24 @@ export class YtDlpExtractorService {
     }
   }
 
+  public getFfmpegPath(): string | null {
+    if (ffmpegInstaller?.path && fs.existsSync(ffmpegInstaller.path)) {
+      return ffmpegInstaller.path;
+    }
+    const localWinFfmpeg = path.resolve(__dirname, '../../node_modules/@ffmpeg-installer/win32-x64/ffmpeg.exe');
+    if (fs.existsSync(localWinFfmpeg)) {
+      return localWinFfmpeg;
+    }
+    const localLinuxFfmpeg = path.resolve(__dirname, '../../node_modules/@ffmpeg-installer/linux-x64/ffmpeg');
+    if (fs.existsSync(localLinuxFfmpeg)) {
+      return localLinuxFfmpeg;
+    }
+    if (fs.existsSync('/usr/bin/ffmpeg')) {
+      return '/usr/bin/ffmpeg';
+    }
+    return null;
+  }
+
   public isAvailable(): boolean {
     if (fs.existsSync(this.ytDlpPath)) return true;
     // Check if yt-dlp is available in system PATH
@@ -164,23 +182,25 @@ export class YtDlpExtractorService {
     });
   }
 
-  public async getDirectMediaUrl(url: string, isAudio: boolean = false, quality?: string): Promise<string | null> {
-    if (!this.isAvailable()) return null;
-    if (url.includes('123456') || url.includes('sample_id')) return null;
+  public async getDirectMediaUrls(url: string, isAudio: boolean = false, quality?: string): Promise<string[]> {
+    if (!this.isAvailable()) return [];
+    if (url.includes('123456') || url.includes('sample_id')) return [];
 
     const lowerUrl = url.toLowerCase();
     const isYouTube = lowerUrl.includes('youtube.com') || lowerUrl.includes('youtu.be');
 
-    let formatSelector = '22/18/b[height<=720]/best[height<=720]/best';
+    let formatSelector = 'bv*[ext=mp4]+ba[ext=m4a]/bv*+ba/b/best';
     if (isAudio) {
-      formatSelector = isYouTube ? '140/ba/b' : 'ba/b';
+      formatSelector = isYouTube ? '140/ba[ext=m4a]/ba/b' : 'ba/b';
     } else if (isYouTube) {
       if (quality === '1080p') {
-        formatSelector = '22/18/b[height<=1080]/best[height<=1080]/best';
+        formatSelector = 'bv*[height<=1080][ext=mp4]+ba[ext=m4a]/bv*[height<=1080]+ba/b[height<=1080]/best';
       } else if (quality === '720p') {
-        formatSelector = '22/18/b[height<=720]/best[height<=720]/best';
+        formatSelector = 'bv*[height<=720][ext=mp4]+ba[ext=m4a]/bv*[height<=720]+ba/b[height<=720]/best';
       } else if (quality === '480p') {
-        formatSelector = '18/b[height<=480]/best[height<=480]/best';
+        formatSelector = 'bv*[height<=480][ext=mp4]+ba[ext=m4a]/bv*[height<=480]+ba/b[height<=480]/best';
+      } else {
+        formatSelector = 'bv*[height<=720][ext=mp4]+ba[ext=m4a]/bv*[height<=720]+ba/b[height<=720]/best';
       }
     } else {
       formatSelector = 'best[ext=mp4]/b[ext=mp4]/best/b';
@@ -220,13 +240,94 @@ export class YtDlpExtractorService {
         { timeout: 25000 },
         (err, stdout) => {
           if (err || !stdout) {
-            return resolve(null);
+            return resolve([]);
           }
-          const lines = stdout.trim().split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-          const directUrl = lines.find((l) => l.startsWith('http://') || l.startsWith('https://'));
-          resolve(directUrl || null);
+          const lines = stdout
+            .trim()
+            .split(/\r?\n/)
+            .map((l) => l.trim())
+            .filter((l) => l.startsWith('http://') || l.startsWith('https://'));
+          resolve(lines);
         }
       );
+    });
+  }
+
+  public async getDirectMediaUrl(url: string, isAudio: boolean = false, quality?: string): Promise<string | null> {
+    const urls = await this.getDirectMediaUrls(url, isAudio, quality);
+    return urls.length > 0 ? urls[0] : null;
+  }
+
+  public async createFfmpegMuxStream(videoUrl: string, audioUrl: string, filename: string): Promise<StreamMediaResult | null> {
+    const ffmpegBinary = this.getFfmpegPath();
+    if (!ffmpegBinary) return null;
+
+    const args = [
+      '-reconnect', '1',
+      '-reconnect_streamed', '1',
+      '-reconnect_delay_max', '5',
+      '-i', videoUrl,
+      '-reconnect', '1',
+      '-reconnect_streamed', '1',
+      '-reconnect_delay_max', '5',
+      '-i', audioUrl,
+      '-c:v', 'copy',
+      '-c:a', 'aac',
+      '-f', 'mp4',
+      '-movflags', 'frag_keyframe+empty_moov+default_base_moof',
+      'pipe:1',
+    ];
+
+    return new Promise((resolve) => {
+      let resolved = false;
+      const child = spawn(ffmpegBinary, args, { stdio: ['ignore', 'pipe', 'ignore'] });
+
+      const timer = setTimeout(() => {
+        if (!resolved) {
+          resolved = true;
+          try { child.kill('SIGKILL'); } catch {}
+          resolve(null);
+        }
+      }, 15000);
+
+      child.stdout.once('data', (firstChunk) => {
+        if (!resolved) {
+          resolved = true;
+          clearTimeout(timer);
+
+          const passThrough = new PassThrough();
+          passThrough.write(firstChunk);
+          child.stdout.pipe(passThrough);
+
+          passThrough.on('close', () => {
+            try { child.kill(); } catch {}
+          });
+
+          resolve({
+            stream: passThrough,
+            contentLength: 0,
+            contentType: 'video/mp4',
+            filename,
+            isExactLength: false,
+          });
+        }
+      });
+
+      child.on('error', () => {
+        if (!resolved) {
+          resolved = true;
+          clearTimeout(timer);
+          resolve(null);
+        }
+      });
+
+      child.on('close', () => {
+        if (!resolved) {
+          resolved = true;
+          clearTimeout(timer);
+          resolve(null);
+        }
+      });
     });
   }
 
@@ -252,12 +353,19 @@ export class YtDlpExtractorService {
     if (isPinterest) referer = 'https://www.pinterest.com/';
     if (isYouTube) referer = 'https://www.youtube.com/';
 
+    const ffmpegBinary = this.getFfmpegPath();
     // Progressive format selector for stdout streaming (prevents ffmpeg stdout freeze)
-    let formatString = '22/18/b[height<=720]/best[height<=720]/best';
+    let formatString = 'bv*[height<=720][ext=mp4]+ba[ext=m4a]/bv*[height<=720]+ba/b[height<=720]/best';
     if (isAudio) {
       formatString = isYouTube ? '140/ba/b' : 'ba/b';
     } else if (isYouTube) {
-      formatString = '18/b/best';
+      if (quality === '1080p') {
+        formatString = 'bv*[height<=1080][ext=mp4]+ba[ext=m4a]/bv*[height<=1080]+ba/b[height<=1080]/best';
+      } else if (quality === '720p') {
+        formatString = 'bv*[height<=720][ext=mp4]+ba[ext=m4a]/bv*[height<=720]+ba/b[height<=720]/best';
+      } else if (quality === '480p') {
+        formatString = 'bv*[height<=480][ext=mp4]+ba[ext=m4a]/bv*[height<=480]+ba/b[height<=480]/best';
+      }
     } else {
       formatString = 'best[ext=mp4]/b[ext=mp4]/best/b';
     }
@@ -272,6 +380,10 @@ export class YtDlpExtractorService {
       '-f', formatString,
       '-o', '-',
     ];
+
+    if (ffmpegBinary) {
+      args.push('--ffmpeg-location', ffmpegBinary);
+    }
 
     if (isYouTube) {
       args.push('--js-runtimes', 'node');
@@ -409,7 +521,8 @@ export class YtDlpExtractorService {
       '--no-check-certificate',
       '--no-update',
       '--no-warnings',
-      '--concurrent-fragments', '4',
+      '--concurrent-fragments', '16',
+      '--no-part',
       '--referer', referer,
       '-f', formatString,
       '-o', outputTemplate,
@@ -440,7 +553,7 @@ export class YtDlpExtractorService {
       execFile(
         this.ytDlpPath,
         args,
-        { timeout: 120000 },
+        { timeout: 1800000 }, // 30 minutes for long videos (e.g. 1 hour video)
         async (err) => {
           if (err) {
             console.error('[ytDlp Download Error]:', err.message);

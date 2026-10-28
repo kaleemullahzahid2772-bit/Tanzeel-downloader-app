@@ -54,7 +54,8 @@ export default async function handler(req: any, res: any) {
     // 1. Try live Render backend first
     try {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 120000);
+      // Allow up to 1 hour streaming proxy for long videos
+      const timer = setTimeout(() => controller.abort(), 3600000);
 
       const backendRes = await fetch(`${BACKEND_URL}/api/download`, {
         method: 'POST',
